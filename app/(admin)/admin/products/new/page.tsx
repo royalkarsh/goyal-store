@@ -1,0 +1,240 @@
+'use client'
+// app/(admin)/admin/products/new/page.tsx
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
+import { ArrowLeft } from 'lucide-react'
+import toast from 'react-hot-toast'
+import type { Category } from '@/types'
+import ImageUpload from '@/components/admin/ImageUpload'
+
+const formSchema = z.object({
+  name:                z.string().min(2, 'Name must be at least 2 characters').max(200),
+  description:         z.string().max(2000).optional(),
+  category_id:         z.string().min(1, 'Select a category'),
+  brand:               z.string().max(100).optional(),
+  weight:              z.string().max(50).optional(),
+  unit:                z.string().min(1, 'Unit is required').max(20),
+  price:               z.number().min(0.01, 'Price must be > 0').max(100000),
+  mrp:                 z.number().min(0).max(100000).nullable().optional(),
+  cost_price:          z.number().min(0).nullable().optional(),
+  tax_rate:            z.number().min(0).max(100),
+  hsn_code:            z.string().max(10).optional(),
+  stock_qty:           z.number().int().min(0),
+  low_stock_threshold: z.number().int().min(0),
+  emoji:               z.string().max(10).optional(),
+  badge:               z.enum(['sale', 'new', 'popular', 'hot', '']).optional(),
+  is_active:           z.boolean(),
+  is_featured:         z.boolean(),
+})
+
+type FormData = z.infer<typeof formSchema>
+
+export default function NewProductPage() {
+  const router = useRouter()
+  const [categories, setCategories] = useState<Category[]>([])
+  const [submitting, setSubmitting] = useState(false)
+  const [imageUrl, setImageUrl]     = useState<string | null>(null)
+
+  const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      unit: 'pcs', tax_rate: 5, stock_qty: 0, low_stock_threshold: 5,
+      is_active: true, is_featured: false,
+    },
+  })
+
+  useEffect(() => {
+    fetch('/api/products?limit=1')
+    // Fetch categories via a direct query
+    fetch('/api/admin/products?limit=1')
+      .then(() => {
+        // Load categories from supabase via a simple endpoint
+        fetch('/api/admin/stats').then(async r => {
+          // fallback: fetch from public products endpoint and extract categories
+        })
+      })
+    // Simplest approach: fetch all products and extract unique categories
+    fetch('/api/products?limit=100').then(r => r.json()).then(j => {
+      const cats: Record<string, Category> = {}
+      for (const p of j.data?.products || []) {
+        if (p.category) cats[p.category.id] = p.category
+      }
+      setCategories(Object.values(cats))
+    })
+  }, [])
+
+  const onSubmit = async (data: FormData) => {
+    setSubmitting(true)
+    const payload = {
+      ...data,
+      mrp: (data.mrp == null || !Number.isFinite(data.mrp)) ? null : data.mrp,
+      cost_price: (data.cost_price == null || !Number.isFinite(data.cost_price)) ? null : data.cost_price,
+      badge: data.badge === '' ? null : data.badge,
+      image_url: imageUrl,
+    }
+    const res = await fetch('/api/admin/products', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+    const json = await res.json()
+    if (res.ok) {
+      toast.success('Product created!')
+      router.push('/admin/products')
+    } else {
+      toast.error(json.error || 'Failed to create product')
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <div className="max-w-3xl">
+      <div className="flex items-center gap-3 mb-6">
+        <button onClick={() => router.back()} className="text-green-deep hover:text-green-light">
+          <ArrowLeft size={20} />
+        </button>
+        <div>
+          <h1 className="font-display font-extrabold text-2xl text-green-deep">Add Product</h1>
+          <p className="text-sm text-gray-500 mt-0.5">Fill in details to add a new product</p>
+        </div>
+      </div>
+
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+        {/* Basic Info */}
+        <div className="bg-white rounded-2xl shadow-card p-5 space-y-4">
+          <h2 className="font-display font-bold text-green-deep">Basic Info</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="sm:col-span-2">
+              <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Product Name *</label>
+              <input {...register('name')} className="input-field mt-1" placeholder="e.g. Tata Salt 1kg" />
+              {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name.message}</p>}
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Category *</label>
+              <select {...register('category_id')} className="input-field mt-1">
+                <option value="">Select category</option>
+                {categories.map(c => <option key={c.id} value={c.id}>{c.emoji} {c.name}</option>)}
+              </select>
+              {errors.category_id && <p className="text-xs text-red-500 mt-1">{errors.category_id.message}</p>}
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Brand</label>
+              <input {...register('brand')} className="input-field mt-1" placeholder="e.g. Tata, Amul" />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Emoji</label>
+              <input {...register('emoji')} className="input-field mt-1" placeholder="🧂" maxLength={10} />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Badge</label>
+              <select {...register('badge')} className="input-field mt-1">
+                <option value="">None</option>
+                <option value="new">New</option>
+                <option value="popular">Popular</option>
+                <option value="hot">Hot</option>
+                <option value="sale">Sale</option>
+              </select>
+            </div>
+          </div>
+          <div className="sm:col-span-2">
+            <ImageUpload
+              currentUrl={imageUrl}
+              onUpload={url => setImageUrl(url)}
+              onRemove={() => setImageUrl(null)}
+            />
+          </div>
+          <div className="sm:col-span-2">
+            <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Description</label>
+            <textarea {...register('description')} rows={3} className="input-field mt-1 resize-none" placeholder="Optional product description" />
+          </div>
+        </div>
+
+        {/* Pricing */}
+        <div className="bg-white rounded-2xl shadow-card p-5 space-y-4">
+          <h2 className="font-display font-bold text-green-deep">Pricing</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div>
+              <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Price (₹) *</label>
+              <input type="number" step="0.01" {...register('price', { valueAsNumber: true })} className="input-field mt-1" placeholder="0.00" />
+              {errors.price && <p className="text-xs text-red-500 mt-1">{errors.price.message}</p>}
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">MRP (₹)</label>
+              <input type="number" step="0.01" {...register('mrp', { valueAsNumber: true })} className="input-field mt-1" placeholder="0.00" />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Cost (₹)</label>
+              <input type="number" step="0.01" {...register('cost_price', { valueAsNumber: true })} className="input-field mt-1" placeholder="0.00" />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Tax Rate %</label>
+              <input type="number" step="0.01" {...register('tax_rate', { valueAsNumber: true })} className="input-field mt-1" placeholder="5" />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+            <div>
+              <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Weight</label>
+              <input {...register('weight')} className="input-field mt-1" placeholder="e.g. 1kg, 500ml" />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Unit *</label>
+              <input {...register('unit')} className="input-field mt-1" placeholder="pcs, kg, ltr" />
+              {errors.unit && <p className="text-xs text-red-500 mt-1">{errors.unit.message}</p>}
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">HSN Code</label>
+              <input {...register('hsn_code')} className="input-field mt-1" placeholder="e.g. 2501" />
+            </div>
+          </div>
+        </div>
+
+        {/* Inventory */}
+        <div className="bg-white rounded-2xl shadow-card p-5 space-y-4">
+          <h2 className="font-display font-bold text-green-deep">Inventory</h2>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Stock Qty *</label>
+              <input type="number" {...register('stock_qty', { valueAsNumber: true })} className="input-field mt-1" />
+              {errors.stock_qty && <p className="text-xs text-red-500 mt-1">{errors.stock_qty.message}</p>}
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Low Stock Alert</label>
+              <input type="number" {...register('low_stock_threshold', { valueAsNumber: true })} className="input-field mt-1" />
+            </div>
+          </div>
+          <div className="flex items-center gap-6">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" {...register('is_active')} className="w-4 h-4 accent-green-deep" />
+              <span className="text-sm font-medium text-green-deep">Active (visible in store)</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" {...register('is_featured')} className="w-4 h-4 accent-saffron" />
+              <span className="text-sm font-medium text-green-deep">Featured</span>
+            </label>
+          </div>
+        </div>
+
+        {/* Submit */}
+        <div className="flex gap-3">
+          <button
+            type="button"
+            onClick={() => router.back()}
+            className="flex-1 py-3 border border-cream-dark rounded-xl text-sm font-semibold text-green-deep hover:bg-cream transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={submitting}
+            className="flex-1 py-3 bg-green-deep text-white rounded-xl text-sm font-semibold hover:bg-green-mid transition-colors disabled:opacity-50"
+          >
+            {submitting ? 'Creating…' : 'Create Product'}
+          </button>
+        </div>
+      </form>
+    </div>
+  )
+}
