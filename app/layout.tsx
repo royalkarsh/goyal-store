@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from 'next'
 import { Syne, Inter } from 'next/font/google'
 import './globals.css'
 import { Toaster } from 'react-hot-toast'
+import { Analytics } from '@vercel/analytics/next'
 
 const syne = Syne({
   subsets: ['latin'],
@@ -55,6 +56,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             error: { iconTheme: { primary: '#e63946', secondary: '#fff' } },
           }}
         />
+        <Analytics />
       </body>
     </html>
   )
