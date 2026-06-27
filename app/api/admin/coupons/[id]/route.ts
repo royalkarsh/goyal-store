@@ -36,7 +36,7 @@ export async function PATCH(
   const { id } = await params
   const body = await request.json()
   const parsed = patchSchema.safeParse(body)
-  if (!parsed.success) return apiError(parsed.error.errors[0].message, 422)
+  if (!parsed.success) return apiError(parsed.error.issues[0].message, 422)
 
   const adminSupabase = await createAdminClient()
   const { data, error } = await adminSupabase
