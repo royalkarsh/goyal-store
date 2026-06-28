@@ -17,7 +17,8 @@ export async function proxy(request: NextRequest) {
   h.set('X-Frame-Options', 'DENY')
   h.set('X-XSS-Protection', '1; mode=block')
   h.set('Referrer-Policy', 'strict-origin-when-cross-origin')
-  h.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()')
+  // camera=self allows getUserMedia on admin barcode scanner; store pages don't use it
+  h.set('Permissions-Policy', 'camera=(self), microphone=(), geolocation=()')
   h.set(
     'Content-Security-Policy',
     [
