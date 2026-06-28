@@ -270,7 +270,14 @@ export default function AdminProductsPage() {
                     <tr key={product.id} className="hover:bg-cream/40 transition-colors">
                       <td className="px-5 py-3">
                         <div className="flex items-center gap-3">
-                          <span className="text-2xl">{product.emoji || '📦'}</span>
+                          <div className="w-10 h-10 rounded-xl bg-cream flex items-center justify-center shrink-0 overflow-hidden">
+                            {product.image_url ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={product.image_url} alt={product.name} className="w-full h-full object-contain" />
+                            ) : (
+                              <span className="text-xl">{product.emoji || '📦'}</span>
+                            )}
+                          </div>
                           <div>
                             <p className="text-sm font-semibold text-green-deep">{product.name}</p>
                             {product.brand && <p className="text-xs text-gray-400">{product.brand}</p>}

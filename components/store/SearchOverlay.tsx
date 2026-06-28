@@ -111,13 +111,22 @@ export default function SearchOverlay({ isOpen, onClose }: Props) {
                       onClick={() => handleSelect(product)}
                       className="w-full flex items-center gap-3 px-5 py-3.5 hover:bg-cream transition-colors text-left"
                     >
-                      <span className="text-2xl w-8 text-center">{product.emoji || '📦'}</span>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-green-deep">{product.name}</p>
-                        <p className="text-xs text-gray-400">{product.weight}</p>
+                      <div className="w-10 h-10 rounded-xl bg-cream flex items-center justify-center shrink-0 overflow-hidden">
+                        {product.image_url ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={product.image_url} alt={product.name} className="w-full h-full object-contain" />
+                        ) : (
+                          <span className="text-xl">{product.emoji || '📦'}</span>
+                        )}
                       </div>
-                      <span className="font-display font-bold text-green-deep">₹{product.price}</span>
-                      <ArrowRight size={14} className="text-gray-300" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-green-deep truncate">{product.name}</p>
+                        <p className="text-xs text-gray-400">
+                          {[product.brand, product.weight].filter(Boolean).join(' · ')}
+                        </p>
+                      </div>
+                      <span className="font-display font-bold text-green-deep shrink-0">₹{product.price}</span>
+                      <ArrowRight size={14} className="text-gray-300 shrink-0" />
                     </button>
                   </li>
                 ))}

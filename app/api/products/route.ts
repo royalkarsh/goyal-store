@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
   }
 
   if (search) {
-    query = query.ilike('name', `%${search}%`)
+    query = query.or(`name.ilike.%${search}%,brand.ilike.%${search}%`)
   }
 
   if (featured === 'true') {

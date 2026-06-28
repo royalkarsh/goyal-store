@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
     .order('created_at', { ascending: false })
     .range(from, from + limit - 1)
 
-  if (search) query = query.ilike('name', `%${search}%`)
+  if (search) query = query.or(`name.ilike.%${search}%,brand.ilike.%${search}%`)
   if (category) query = query.eq('categories.slug', category)
   if (lowStock) query = query.lte('stock_qty', adminSupabase.rpc('get_low_stock_threshold'))
 
