@@ -24,6 +24,7 @@ type ScanState = 'idle' | 'scanning' | 'fetching' | 'found' | 'not_found'
 export default function BarcodeScanner({ onFound, onClose }: Props) {
   const videoRef  = useRef<HTMLVideoElement>(null)
   const readerRef = useRef<any>(null)
+  const streamRef = useRef<MediaStream | null>(null)
 
   const [mode,       setMode]       = useState<'camera' | 'manual'>('camera')
   const [scanState,  setScanState]  = useState<ScanState>('scanning')
@@ -39,21 +40,35 @@ export default function BarcodeScanner({ onFound, onClose }: Props) {
 
     const start = async () => {
       try {
+        // getUserMedia always shows the browser permission prompt
+        if (!navigator.mediaDevices?.getUserMedia) throw new Error('no-api')
+
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: 'environment' } },
+        })
+
+        if (cancelled) { stream.getTracks().forEach(t => t.stop()); return }
+        if (!videoRef.current) { stream.getTracks().forEach(t => t.stop()); return }
+
+        streamRef.current = stream
+
         const { BrowserMultiFormatReader } = await import('@zxing/library')
-        if (cancelled || !videoRef.current) return
+        if (cancelled) return
+
         const reader = new BrowserMultiFormatReader()
         readerRef.current = reader
-        await reader.decodeFromVideoDevice(
-          null,
-          videoRef.current,
-          (res) => {
-            if (res && !fetchingRef.current) lookup(res.getText())
-          }
-        )
-      } catch {
-        if (!cancelled) {
-          setMode('manual')
-          toast('Camera not available — enter barcode manually', { icon: '⌨️' })
+
+        // decodeFromStream attaches the stream to the video element and scans continuously
+        await reader.decodeFromStream(stream, videoRef.current, (res) => {
+          if (res && !fetchingRef.current) lookup(res.getText())
+        })
+      } catch (err: any) {
+        if (cancelled) return
+        setMode('manual')
+        if (err?.name === 'NotAllowedError') {
+          toast.error('Camera permission denied — enter barcode manually')
+        } else {
+          toast('No camera available — enter barcode manually', { icon: '⌨️' })
         }
       }
     }
@@ -70,6 +85,11 @@ export default function BarcodeScanner({ onFound, onClose }: Props) {
       try { readerRef.current.reset() } catch { /* ignore */ }
       readerRef.current = null
     }
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(t => t.stop())
+      streamRef.current = null
+    }
+    if (videoRef.current) videoRef.current.srcObject = null
   }
 
   const lookup = async (code: string) => {
