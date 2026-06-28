@@ -18,14 +18,14 @@ export default function Footer() {
               <p className="font-display font-extrabold text-xl">Goyal General Store</p>
             </div>
             <p className="text-white/55 text-sm leading-relaxed max-w-xs">
-              Your trusted neighbourhood kirana in Rohini, Delhi.
-              Serving fresh groceries and daily essentials since 1998.
+              Your trusted neighbourhood kirana in Anpara.
+              Serving fresh groceries and daily essentials to Anpara Colony, Renusagar, Auri More, Kashi More and nearby areas.
             </p>
-            <div className="mt-5 space-y-1 text-sm text-white/55">
-              <p>📍 Rohini, New Delhi — 110085</p>
-              <p>📞 +91 98765 43210</p>
-              <p>📧 hello@goyalstore.in</p>
-              <p>⏰ Open daily 7 AM – 10 PM</p>
+            <div className="mt-5 space-y-1.5 text-sm text-white/55">
+              <p>📍 Anpara Market, Anpara, Dist. Sonbhadra, U.P. — 231225</p>
+              <p>📞 <a href="tel:+919415676421" className="hover:text-saffron transition-colors">+91 94156 76421</a></p>
+              <p>📧 <a href="mailto:mohangoel.anpara@gmail.com" className="hover:text-saffron transition-colors">mohangoel.anpara@gmail.com</a></p>
+              <p>⏰ Open daily 9 AM – 10 PM</p>
             </div>
           </div>
 

@@ -44,7 +44,7 @@ export default function Hero() {
         {/* Pulsing badge */}
         <div className="flex items-center gap-2.5 bg-green-muted/15 border border-green-muted/30 rounded-full px-5 py-2 mb-8">
           <span className="w-2.5 h-2.5 bg-green-muted rounded-full animate-pulse-ring shrink-0" />
-          <span className="text-green-muted text-sm font-semibold">Now delivering in Rohini, Delhi</span>
+          <span className="text-green-muted text-sm font-semibold">Now delivering in Anpara &amp; nearby areas</span>
         </div>
 
         {/* Headline */}
@@ -53,7 +53,7 @@ export default function Hero() {
           <span className="block text-saffron mt-1">Fresh. Local. Fast.</span>
         </h1>
         <p className="text-white/55 text-center text-lg mb-10 max-w-lg leading-relaxed">
-          Your trusted neighbourhood kirana in Rohini, Delhi — 500+ daily essentials delivered fresh to your door.
+          Your trusted neighbourhood kirana in Anpara — daily essentials delivered fresh to your door in Anpara Colony, Renusagar, Auri More, Kashi More &amp; more.
         </p>
 
         {/* CTAs */}
