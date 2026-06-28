@@ -47,23 +47,9 @@ export default function NewProductPage() {
   })
 
   useEffect(() => {
-    fetch('/api/products?limit=1')
-    // Fetch categories via a direct query
-    fetch('/api/admin/products?limit=1')
-      .then(() => {
-        // Load categories from supabase via a simple endpoint
-        fetch('/api/admin/stats').then(async r => {
-          // fallback: fetch from public products endpoint and extract categories
-        })
-      })
-    // Simplest approach: fetch all products and extract unique categories
-    fetch('/api/products?limit=100').then(r => r.json()).then(j => {
-      const cats: Record<string, Category> = {}
-      for (const p of j.data?.products || []) {
-        if (p.category) cats[p.category.id] = p.category
-      }
-      setCategories(Object.values(cats))
-    })
+    fetch('/api/admin/categories')
+      .then(r => r.json())
+      .then(j => setCategories((j.data?.categories || []).filter((c: Category) => c.is_active)))
   }, [])
 
   const onSubmit = async (data: FormData) => {

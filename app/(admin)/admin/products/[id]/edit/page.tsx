@@ -50,8 +50,8 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
   useEffect(() => {
     Promise.all([
       fetch(`/api/admin/products/${id}`).then(r => r.json()),
-      fetch('/api/products?limit=100').then(r => r.json()),
-    ]).then(([prodRes, allRes]) => {
+      fetch('/api/admin/categories').then(r => r.json()),
+    ]).then(([prodRes, catRes]) => {
       const p = prodRes.data
       setProduct(p)
       setImageUrl(p.image_url || null)
@@ -65,12 +65,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
         emoji: p.emoji || '', badge: p.badge || '',
         is_active: p.is_active, is_featured: p.is_featured,
       })
-      // Extract unique categories
-      const cats: Record<string, Category> = {}
-      for (const prod of allRes.data?.products || []) {
-        if (prod.category) cats[prod.category.id] = prod.category
-      }
-      setCategories(Object.values(cats))
+      setCategories((catRes.data?.categories || []).filter((c: Category) => c.is_active))
       setLoading(false)
     })
   }, [id, reset])
