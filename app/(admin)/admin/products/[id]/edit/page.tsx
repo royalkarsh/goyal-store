@@ -18,8 +18,8 @@ const formSchema = z.object({
   weight:              z.string().max(50).optional(),
   unit:                z.string().min(1).max(20),
   price:               z.number().min(0.01).max(100000),
-  mrp:                 z.preprocess(v => (typeof v === 'number' && isNaN(v)) ? null : v, z.number().min(0).max(100000).nullable().optional()),
-  cost_price:          z.preprocess(v => (typeof v === 'number' && isNaN(v)) ? null : v, z.number().min(0).nullable().optional()),
+  mrp:                 z.number().min(0).max(100000).nullable().optional(),
+  cost_price:          z.number().min(0).nullable().optional(),
   tax_rate:            z.number().min(0).max(100),
   hsn_code:            z.string().max(10).optional(),
   stock_qty:           z.number().int().min(0),
@@ -200,11 +200,11 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
             </div>
             <div>
               <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">MRP (₹)</label>
-              <input type="number" step="0.01" {...register('mrp', { valueAsNumber: true })} className="input-field mt-1" />
+              <input type="number" step="0.01" {...register('mrp', { setValueAs: v => v === '' ? null : Number(v) })} className="input-field mt-1" />
             </div>
             <div>
               <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Cost (₹)</label>
-              <input type="number" step="0.01" {...register('cost_price', { valueAsNumber: true })} className="input-field mt-1" />
+              <input type="number" step="0.01" {...register('cost_price', { setValueAs: v => v === '' ? null : Number(v) })} className="input-field mt-1" />
             </div>
             <div>
               <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Tax %</label>
