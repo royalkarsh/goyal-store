@@ -138,6 +138,7 @@ export const productSchema = z.object({
   stock_qty:           z.number().int().min(0),
   low_stock_threshold: z.number().int().min(0),
   emoji:               z.string().max(10).optional(),
+  image_url:           z.string().optional().nullable(),
   badge:               z.enum(['sale','new','popular','hot']).nullable().optional(),
   is_active:           z.boolean(),
   is_featured:         z.boolean(),
