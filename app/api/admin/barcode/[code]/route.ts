@@ -26,6 +26,30 @@ function guessCategory(tags: string[]): string {
   return 'staples'
 }
 
+// Try multiple open product databases in order — all share the same API structure
+const DATABASES = [
+  'world.openfoodfacts.org',    // food, beverages, staples
+  'world.openbeautyfacts.org',  // personal care, cosmetics, soap, shampoo
+  'world.openproductsfacts.org',// general household products
+]
+
+async function fetchFromDatabases(code: string): Promise<any | null> {
+  for (const host of DATABASES) {
+    try {
+      const res = await fetch(`https://${host}/api/v0/product/${code}.json`, {
+        headers: { 'User-Agent': 'GoyalGeneralStore/1.0 (mohangoel.anpara@gmail.com)' },
+        signal: AbortSignal.timeout(6000),
+      })
+      if (!res.ok) continue
+      const body = await res.json()
+      if (body.status === 1 && body.product) return body.product
+    } catch {
+      // timeout or network error — try next database
+    }
+  }
+  return null
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ code: string }> }
@@ -43,28 +67,9 @@ export async function GET(
   // Sanitize: digits only, 8–14 chars (EAN-8, EAN-13, UPC-A, etc.)
   if (!/^\d{8,14}$/.test(code)) return apiError('Invalid barcode format', 400)
 
-  let offRes: Response
-  try {
-    offRes = await fetch(
-      `https://world.openfoodfacts.org/api/v0/product/${code}.json`,
-      {
-        headers: { 'User-Agent': 'GoyalGeneralStore/1.0 (mohangoel.anpara@gmail.com)' },
-        signal: AbortSignal.timeout(8000),
-      }
-    )
-  } catch {
-    return apiError('Could not reach Open Food Facts API', 503)
-  }
+  const p = await fetchFromDatabases(code)
+  if (!p) return apiError('Product not found in any database', 404)
 
-  if (!offRes.ok) return apiError('Barcode lookup failed', 502)
-
-  const body = await offRes.json()
-
-  if (body.status !== 1 || !body.product) {
-    return apiError('Product not found in Open Food Facts database', 404)
-  }
-
-  const p = body.product
   const categoriesTags: string[] = p.categories_tags || []
   const categorySlug = guessCategory(categoriesTags)
 

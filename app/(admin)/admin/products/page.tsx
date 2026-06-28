@@ -2,6 +2,7 @@
 // app/(admin)/admin/products/page.tsx
 import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { Plus, Search, Edit2, ToggleLeft, ToggleRight, AlertTriangle, Package, ScanLine, X } from 'lucide-react'
 import toast from 'react-hot-toast'
 import type { Product, Category } from '@/types'
@@ -142,6 +143,7 @@ function QuickAddModal({
 
 // ── Main page ──────────────────────────────────────────────────────────────────
 export default function AdminProductsPage() {
+  const router = useRouter()
   const [products,    setProducts]    = useState<Product[]>([])
   const [categories,  setCategories]  = useState<Category[]>([])
   const [total,       setTotal]       = useState(0)
@@ -198,6 +200,7 @@ export default function AdminProductsPage() {
         <BarcodeScanner
           onFound={onBarcodeFound}
           onClose={() => setShowScanner(false)}
+          onFillManually={() => { setShowScanner(false); router.push('/admin/products/new') }}
         />
       )}
 

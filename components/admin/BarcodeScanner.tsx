@@ -15,13 +15,14 @@ export interface BarcodeProductData {
 }
 
 interface Props {
-  onFound: (data: BarcodeProductData) => void
-  onClose: () => void
+  onFound:        (data: BarcodeProductData) => void
+  onClose:        () => void
+  onFillManually?: () => void  // if provided, "Fill Manually" calls this instead of just closing
 }
 
 type ScanState = 'idle' | 'scanning' | 'fetching' | 'found' | 'not_found'
 
-export default function BarcodeScanner({ onFound, onClose }: Props) {
+export default function BarcodeScanner({ onFound, onClose, onFillManually }: Props) {
   const videoRef  = useRef<HTMLVideoElement>(null)
   const readerRef = useRef<any>(null)
   const streamRef = useRef<MediaStream | null>(null)
@@ -131,6 +132,7 @@ export default function BarcodeScanner({ onFound, onClose }: Props) {
 
   const handleClose = () => { stopCamera(); onClose() }
   const handleConfirm = () => { if (result) onFound(result) }
+  const handleFillManually = () => { stopCamera(); onFillManually ? onFillManually() : onClose() }
 
   const switchToManual = () => { stopCamera(); setMode('manual') }
   const switchToCamera = () => { setScanState('scanning'); setMode('camera') }
@@ -288,7 +290,7 @@ export default function BarcodeScanner({ onFound, onClose }: Props) {
                   Try Again
                 </button>
                 <button
-                  onClick={handleClose}
+                  onClick={handleFillManually}
                   className="flex-1 py-3 bg-saffron text-green-deep rounded-xl text-sm font-bold hover:opacity-90 transition-opacity"
                 >
                   Fill Manually
