@@ -5,10 +5,11 @@ import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, ScanLine } from 'lucide-react'
 import toast from 'react-hot-toast'
 import type { Category } from '@/types'
 import ImageUpload from '@/components/admin/ImageUpload'
+import BarcodeScanner, { type BarcodeProductData } from '@/components/admin/BarcodeScanner'
 
 const formSchema = z.object({
   name:                z.string().min(2, 'Name must be at least 2 characters').max(200),
@@ -32,13 +33,23 @@ const formSchema = z.object({
 
 type FormData = z.infer<typeof formSchema>
 
+function AutoBadge() {
+  return (
+    <span className="ml-1.5 inline-flex items-center gap-0.5 text-green-600 text-xs font-semibold">
+      <span>✓</span> Auto-filled
+    </span>
+  )
+}
+
 export default function NewProductPage() {
   const router = useRouter()
-  const [categories, setCategories] = useState<Category[]>([])
-  const [submitting, setSubmitting] = useState(false)
-  const [imageUrl, setImageUrl]     = useState<string | null>(null)
+  const [categories,   setCategories]   = useState<Category[]>([])
+  const [submitting,   setSubmitting]   = useState(false)
+  const [imageUrl,     setImageUrl]     = useState<string | null>(null)
+  const [showScanner,  setShowScanner]  = useState(false)
+  const [autofilled,   setAutofilled]   = useState<Set<string>>(new Set())
 
-  const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
+  const { register, handleSubmit, setValue, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       unit: 'pcs', tax_rate: 0, stock_qty: 0, low_stock_threshold: 5,
@@ -51,6 +62,27 @@ export default function NewProductPage() {
       .then(r => r.json())
       .then(j => setCategories((j.data?.categories || []).filter((c: Category) => c.is_active)))
   }, [])
+
+  const onBarcodeFound = (data: BarcodeProductData) => {
+    const filled = new Set<string>()
+
+    if (data.name)  { setValue('name',  data.name);  filled.add('name')  }
+    if (data.brand) { setValue('brand', data.brand); filled.add('brand') }
+    if (data.weight){ setValue('weight',data.weight);filled.add('weight') }
+    if (data.emoji) { setValue('emoji', data.emoji); filled.add('emoji') }
+
+    // Match category by slug
+    const cat = categories.find(c => (c as any).slug === data.category_slug)
+    if (cat) { setValue('category_id', cat.id); filled.add('category_id') }
+
+    if (data.image_url) { setImageUrl(data.image_url); filled.add('image_url') }
+
+    setAutofilled(filled)
+    setShowScanner(false)
+
+    const count = filled.size
+    toast.success(`${count} field${count !== 1 ? 's' : ''} auto-filled from barcode`)
+  }
 
   const onSubmit = async (data: FormData) => {
     setSubmitting(true)
@@ -76,17 +108,40 @@ export default function NewProductPage() {
     }
   }
 
+  const af = (field: string) => autofilled.has(field)
+
   return (
     <div className="max-w-3xl">
+      {showScanner && (
+        <BarcodeScanner
+          onFound={onBarcodeFound}
+          onClose={() => setShowScanner(false)}
+        />
+      )}
+
       <div className="flex items-center gap-3 mb-6">
         <button onClick={() => router.back()} className="text-green-deep hover:text-green-light">
           <ArrowLeft size={20} />
         </button>
-        <div>
+        <div className="flex-1">
           <h1 className="font-display font-extrabold text-2xl text-green-deep">Add Product</h1>
           <p className="text-sm text-gray-500 mt-0.5">Fill in details to add a new product</p>
         </div>
+        <button
+          type="button"
+          onClick={() => setShowScanner(true)}
+          className="flex items-center gap-2 bg-saffron text-green-deep px-4 py-2.5 rounded-xl text-sm font-bold hover:opacity-90 transition-opacity shadow-sm"
+        >
+          <ScanLine size={16} /> Scan Barcode
+        </button>
       </div>
+
+      {autofilled.size > 0 && (
+        <div className="flex items-center gap-2 text-sm text-green-700 bg-green-50 border border-green-200 rounded-xl px-4 py-3 mb-5">
+          <span className="text-base">✓</span>
+          <span><strong>{autofilled.size} fields</strong> auto-filled from barcode. Review and add price + stock below.</span>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
         {/* Basic Info */}
@@ -94,25 +149,48 @@ export default function NewProductPage() {
           <h2 className="font-display font-bold text-green-deep">Basic Info</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="sm:col-span-2">
-              <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Product Name *</label>
-              <input {...register('name')} className="input-field mt-1" placeholder="e.g. Tata Salt 1kg" />
+              <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                Product Name *{af('name') && <AutoBadge />}
+              </label>
+              <input
+                {...register('name')}
+                className={`input-field mt-1 ${af('name') ? 'border-green-400 ring-1 ring-green-300' : ''}`}
+                placeholder="e.g. Tata Salt 1kg"
+              />
               {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name.message}</p>}
             </div>
             <div>
-              <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Category *</label>
-              <select {...register('category_id')} className="input-field mt-1">
+              <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                Category *{af('category_id') && <AutoBadge />}
+              </label>
+              <select
+                {...register('category_id')}
+                className={`input-field mt-1 ${af('category_id') ? 'border-green-400 ring-1 ring-green-300' : ''}`}
+              >
                 <option value="">Select category</option>
                 {categories.map(c => <option key={c.id} value={c.id}>{c.emoji} {c.name}</option>)}
               </select>
               {errors.category_id && <p className="text-xs text-red-500 mt-1">{errors.category_id.message}</p>}
             </div>
             <div>
-              <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Brand</label>
-              <input {...register('brand')} className="input-field mt-1" placeholder="e.g. Tata, Amul" />
+              <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                Brand{af('brand') && <AutoBadge />}
+              </label>
+              <input
+                {...register('brand')}
+                className={`input-field mt-1 ${af('brand') ? 'border-green-400 ring-1 ring-green-300' : ''}`}
+                placeholder="e.g. Tata, Amul"
+              />
             </div>
             <div>
-              <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Emoji</label>
-              <input {...register('emoji')} className="input-field mt-1" placeholder="🧂" maxLength={10} />
+              <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                Emoji{af('emoji') && <AutoBadge />}
+              </label>
+              <input
+                {...register('emoji')}
+                className={`input-field mt-1 ${af('emoji') ? 'border-green-400 ring-1 ring-green-300' : ''}`}
+                placeholder="🧂" maxLength={10}
+              />
             </div>
             <div>
               <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Badge</label>
@@ -126,9 +204,12 @@ export default function NewProductPage() {
             </div>
           </div>
           <div className="sm:col-span-2">
+            <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2 block">
+              Product Image{af('image_url') && <AutoBadge />}
+            </label>
             <ImageUpload
               currentUrl={imageUrl}
-              onUpload={url => setImageUrl(url)}
+              onUpload={url => { setImageUrl(url); setAutofilled(prev => new Set([...prev, 'image_url'])) }}
               onRemove={() => setImageUrl(null)}
             />
           </div>
@@ -162,8 +243,14 @@ export default function NewProductPage() {
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
             <div>
-              <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Weight</label>
-              <input {...register('weight')} className="input-field mt-1" placeholder="e.g. 1kg, 500ml" />
+              <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                Weight{af('weight') && <AutoBadge />}
+              </label>
+              <input
+                {...register('weight')}
+                className={`input-field mt-1 ${af('weight') ? 'border-green-400 ring-1 ring-green-300' : ''}`}
+                placeholder="e.g. 1kg, 500ml"
+              />
             </div>
             <div>
               <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Unit *</label>

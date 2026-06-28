@@ -2,40 +2,172 @@
 // app/(admin)/admin/products/page.tsx
 import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
-import { Plus, Search, Edit2, ToggleLeft, ToggleRight, AlertTriangle, Package } from 'lucide-react'
+import { Plus, Search, Edit2, ToggleLeft, ToggleRight, AlertTriangle, Package, ScanLine, X } from 'lucide-react'
 import toast from 'react-hot-toast'
 import type { Product, Category } from '@/types'
+import BarcodeScanner, { type BarcodeProductData } from '@/components/admin/BarcodeScanner'
 
+// ── Quick-add modal shown after a successful barcode scan ──────────────────────
+function QuickAddModal({
+  data, categories, onClose, onSaved,
+}: {
+  data: BarcodeProductData
+  categories: Category[]
+  onClose: () => void
+  onSaved: () => void
+}) {
+  const [price, setPrice] = useState('')
+  const [stock, setStock] = useState('1')
+  const [saving, setSaving] = useState(false)
+
+  const cat = categories.find(c => (c as any).slug === data.category_slug)
+
+  const handleSave = async () => {
+    const priceNum = parseFloat(price)
+    if (!price || isNaN(priceNum) || priceNum <= 0) {
+      toast.error('Enter a valid selling price')
+      return
+    }
+    if (!cat) {
+      toast.error(`Category "${data.category_slug}" not found — add product manually`)
+      return
+    }
+    setSaving(true)
+    const res = await fetch('/api/admin/products', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name:                data.name || 'Unknown Product',
+        brand:               data.brand  || undefined,
+        weight:              data.weight || undefined,
+        category_id:         cat.id,
+        emoji:               data.emoji,
+        image_url:           data.image_url,
+        price:               priceNum,
+        unit:                'pcs',
+        tax_rate:            0,
+        stock_qty:           parseInt(stock) || 0,
+        low_stock_threshold: 5,
+        is_active:           true,
+        is_featured:         false,
+      }),
+    })
+    const json = await res.json()
+    if (res.ok) {
+      toast.success(`${data.name || 'Product'} added!`)
+      onSaved()
+    } else {
+      toast.error(json.error || 'Failed to add product')
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/60 flex items-end sm:items-center justify-center p-4">
+      <div className="bg-white rounded-3xl w-full max-w-sm shadow-2xl animate-fade-in overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-cream-dark">
+          <p className="font-display font-bold text-green-deep">Quick Add Product</p>
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-green-deep rounded-xl hover:bg-cream transition-colors">
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="p-5 space-y-4">
+          {/* Product preview */}
+          <div className="flex gap-3 bg-cream rounded-2xl p-3">
+            {data.image_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={data.image_url} alt={data.name || ''} className="w-14 h-14 object-contain rounded-xl bg-white shrink-0" />
+            ) : (
+              <div className="w-14 h-14 bg-white rounded-xl flex items-center justify-center text-2xl shrink-0">{data.emoji}</div>
+            )}
+            <div className="min-w-0">
+              <p className="text-sm font-bold text-green-deep leading-snug">{data.name || <span className="text-gray-400 italic">Unknown name</span>}</p>
+              {data.brand  && <p className="text-xs text-gray-500 mt-0.5">{data.brand}</p>}
+              {data.weight && <p className="text-xs text-gray-400">{data.weight}</p>}
+              {cat ? (
+                <span className="inline-block mt-1 bg-green-100 text-green-700 text-xs font-semibold px-2 py-0.5 rounded-full">{cat.emoji} {cat.name}</span>
+              ) : (
+                <span className="inline-block mt-1 bg-orange-100 text-orange-600 text-xs font-semibold px-2 py-0.5 rounded-full">Category not matched</span>
+              )}
+            </div>
+          </div>
+
+          {/* Price + stock */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Price (₹) *</label>
+              <input
+                type="number" step="0.01" min="0.01"
+                value={price}
+                onChange={e => setPrice(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleSave()}
+                placeholder="0.00"
+                className="input-field mt-1"
+                autoFocus
+              />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Stock Qty</label>
+              <input
+                type="number" min="0"
+                value={stock}
+                onChange={e => setStock(e.target.value)}
+                className="input-field mt-1"
+              />
+            </div>
+          </div>
+
+          <div className="flex gap-2 pt-1">
+            <button
+              onClick={onClose}
+              className="flex-1 py-3 border border-cream-dark rounded-xl text-sm font-semibold text-green-deep hover:bg-cream transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="flex-1 py-3 bg-green-deep text-white rounded-xl text-sm font-bold hover:bg-green-mid transition-colors disabled:opacity-50"
+            >
+              {saving ? 'Saving…' : 'Add Product'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Main page ──────────────────────────────────────────────────────────────────
 export default function AdminProductsPage() {
-  const [products, setProducts]   = useState<Product[]>([])
-  const [categories, setCategories] = useState<Category[]>([])
-  const [total, setTotal]         = useState(0)
-  const [page, setPage]           = useState(1)
-  const [loading, setLoading]     = useState(true)
-  const [search, setSearch]       = useState('')
-  const [category, setCategory]   = useState('')
+  const [products,    setProducts]    = useState<Product[]>([])
+  const [categories,  setCategories]  = useState<Category[]>([])
+  const [total,       setTotal]       = useState(0)
+  const [page,        setPage]        = useState(1)
+  const [loading,     setLoading]     = useState(true)
+  const [search,      setSearch]      = useState('')
+  const [showScanner, setShowScanner] = useState(false)
+  const [quickAddData,setQuickAddData]= useState<BarcodeProductData | null>(null)
 
   const fetchProducts = useCallback(async () => {
     setLoading(true)
     const params = new URLSearchParams({ page: String(page), limit: '20' })
-    if (search)   params.set('search', search)
-    if (category) params.set('category', category)
+    if (search) params.set('search', search)
     const res  = await fetch(`/api/admin/products?${params}`)
     const json = await res.json()
     setProducts(json.data?.products || [])
     setTotal(json.data?.total || 0)
     setLoading(false)
-  }, [page, search, category])
+  }, [page, search])
 
   useEffect(() => { fetchProducts() }, [fetchProducts])
 
   useEffect(() => {
-    fetch('/api/products?limit=100')
+    fetch('/api/admin/categories')
       .then(r => r.json())
-      .then(j => {/* categories come from products join */})
-    // fetch categories separately
-    fetch('/api/admin/products?limit=1')
-      .then(r => r.json())
+      .then(j => setCategories((j.data?.categories || []).filter((c: Category) => c.is_active)))
   }, [])
 
   const toggleActive = async (product: Product) => {
@@ -52,10 +184,33 @@ export default function AdminProductsPage() {
     }
   }
 
+  const onBarcodeFound = (data: BarcodeProductData) => {
+    setShowScanner(false)
+    setQuickAddData(data)
+  }
+
   const pages = Math.ceil(total / 20)
 
   return (
     <div>
+      {/* Barcode scanner modal */}
+      {showScanner && (
+        <BarcodeScanner
+          onFound={onBarcodeFound}
+          onClose={() => setShowScanner(false)}
+        />
+      )}
+
+      {/* Quick-add modal after scan */}
+      {quickAddData && (
+        <QuickAddModal
+          data={quickAddData}
+          categories={categories}
+          onClose={() => setQuickAddData(null)}
+          onSaved={() => { setQuickAddData(null); fetchProducts() }}
+        />
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -109,7 +264,7 @@ export default function AdminProductsPage() {
               </thead>
               <tbody className="divide-y divide-cream-dark">
                 {products.map(product => {
-                  const lowStock = product.stock_qty <= product.low_stock_threshold && product.stock_qty > 0
+                  const lowStock  = product.stock_qty <= product.low_stock_threshold && product.stock_qty > 0
                   const outOfStock = product.stock_qty === 0
                   return (
                     <tr key={product.id} className="hover:bg-cream/40 transition-colors">
@@ -140,9 +295,7 @@ export default function AdminProductsPage() {
                       </td>
                       <td className="px-5 py-3">
                         <span className={`text-xs font-semibold px-2 py-1 rounded-full
-                          ${product.is_active
-                            ? 'bg-green-100 text-green-700'
-                            : 'bg-gray-100 text-gray-500'}`}>
+                          ${product.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
                           {product.is_active ? 'Active' : 'Inactive'}
                         </span>
                       </td>
@@ -157,9 +310,7 @@ export default function AdminProductsPage() {
                           <button
                             onClick={() => toggleActive(product)}
                             className={`p-1.5 rounded-lg transition-colors
-                              ${product.is_active
-                                ? 'text-green-600 hover:bg-green-50'
-                                : 'text-gray-400 hover:bg-gray-50'}`}
+                              ${product.is_active ? 'text-green-600 hover:bg-green-50' : 'text-gray-400 hover:bg-gray-50'}`}
                           >
                             {product.is_active ? <ToggleRight size={18} /> : <ToggleLeft size={18} />}
                           </button>
@@ -202,6 +353,14 @@ export default function AdminProductsPage() {
           </div>
         )}
       </div>
+
+      {/* Floating Quick Scan button */}
+      <button
+        onClick={() => setShowScanner(true)}
+        className="fixed bottom-6 right-6 flex items-center gap-2 bg-saffron text-green-deep px-5 py-3.5 rounded-full text-sm font-bold shadow-lg hover:opacity-90 hover:-translate-y-0.5 transition-all duration-200 z-40"
+      >
+        <ScanLine size={18} /> Quick Scan
+      </button>
     </div>
   )
 }

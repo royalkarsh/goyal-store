@@ -134,6 +134,14 @@ body {
 .animate-slide-in  { animation: slide-in-right 0.4s cubic-bezier(0.32,0.72,0,1); }
 .animate-fade-in   { animation: fade-in 0.3s ease-out; }
 
+@keyframes scan-line {
+  0%   { transform: translateY(-40px); opacity: 0; }
+  10%  { opacity: 1; }
+  90%  { opacity: 1; }
+  100% { transform: translateY(40px); opacity: 0; }
+}
+.animate-scan-line { animation: scan-line 1.8s ease-in-out infinite; }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
