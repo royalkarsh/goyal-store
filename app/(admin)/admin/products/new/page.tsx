@@ -41,7 +41,7 @@ export default function NewProductPage() {
   const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      unit: 'pcs', tax_rate: 5, stock_qty: 0, low_stock_threshold: 5,
+      unit: 'pcs', tax_rate: 0, stock_qty: 0, low_stock_threshold: 5,
       is_active: true, is_featured: false,
     },
   })
@@ -171,7 +171,7 @@ export default function NewProductPage() {
             </div>
             <div>
               <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Tax Rate %</label>
-              <input type="number" step="0.01" {...register('tax_rate', { valueAsNumber: true })} className="input-field mt-1" placeholder="5" />
+              <input type="number" step="0.01" {...register('tax_rate', { valueAsNumber: true })} className="input-field mt-1" placeholder="0" />
             </div>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">

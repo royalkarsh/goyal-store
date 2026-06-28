@@ -7,7 +7,7 @@ import type { CartItem, Product, Coupon, CartTotals } from '@/types'
 
 const FREE_DELIVERY_ABOVE = Number(process.env.NEXT_PUBLIC_FREE_DELIVERY_ABOVE || 299)
 const DELIVERY_CHARGE = 30
-const GST_RATE = 0.05
+const GST_RATE = 0
 
 interface CartState {
   items: CartItem[]

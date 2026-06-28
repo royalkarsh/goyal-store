@@ -292,8 +292,8 @@ export default function CheckoutPage() {
                   <span>Delivery</span>
                   <span>{totals.isFreeDelivery ? <span className="text-green-600">Free</span> : `₹${totals.deliveryCharge}`}</span>
                 </div>
-                <div className="flex justify-between text-sm text-gray-600">
-                  <span>GST (5%)</span><span>₹{totals.taxAmount.toFixed(2)}</span>
+                <div className="flex justify-between text-sm text-gray-500">
+                  <span>Taxes</span><span>Included in price</span>
                 </div>
                 <div className="flex justify-between font-display font-extrabold text-lg text-green-deep border-t border-cream-dark pt-3">
                   <span>Total</span><span>₹{totals.total.toFixed(2)}</span>

@@ -180,9 +180,9 @@ export default function CartDrawer() {
                   {totals.isFreeDelivery ? 'FREE 🎉' : `₹${totals.deliveryCharge}`}
                 </span>
               </div>
-              <div className="flex justify-between text-gray-500 text-xs">
-                <span>GST (5%)</span>
-                <span>₹{totals.taxAmount.toFixed(0)}</span>
+              <div className="flex justify-between text-gray-400 text-xs">
+                <span>Taxes</span>
+                <span>Included</span>
               </div>
               <div className="flex justify-between font-display font-extrabold text-green-deep text-lg pt-2 border-t border-cream-dark">
                 <span>Total</span>

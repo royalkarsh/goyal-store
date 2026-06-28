@@ -118,8 +118,8 @@ export default async function OrderDetailPage({ params }: Props) {
           <div className="flex justify-between text-sm text-gray-600">
             <span>Delivery</span><span>{order.delivery_charge === 0 ? 'Free' : `₹${order.delivery_charge}`}</span>
           </div>
-          <div className="flex justify-between text-sm text-gray-600">
-            <span>GST</span><span>₹{order.tax_amount}</span>
+          <div className="flex justify-between text-sm text-gray-500">
+            <span>Taxes</span><span>Included in price</span>
           </div>
           <div className="flex justify-between font-display font-extrabold text-lg text-green-deep border-t border-cream-dark pt-2">
             <span>Total</span><span>₹{order.total_amount}</span>

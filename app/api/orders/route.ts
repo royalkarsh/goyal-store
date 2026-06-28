@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
   })
 
   const subtotal = orderItems.reduce((sum, i) => sum + i.subtotal, 0)
-  const taxAmount = +(subtotal * 0.05).toFixed(2)
+  const taxAmount = 0 // prices are tax-inclusive
 
   // ── Validate coupon ──────────────────────────────────────
   let discountAmount = 0
