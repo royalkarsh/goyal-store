@@ -1,26 +1,55 @@
 'use client'
 // components/store/CartDrawer.tsx
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { X, ShoppingBag, Minus, Plus, Trash2, Tag } from 'lucide-react'
 import { useCartStore } from '@/lib/store/cart'
+import toast from 'react-hot-toast'
+import type { Coupon } from '@/types'
 
 const FREE_DELIVERY_ABOVE = 299
 
 export default function CartDrawer() {
   const {
     isOpen, closeCart, items, removeItem, updateQuantity,
-    coupon, removeCoupon, getTotals, getItemCount
+    coupon, applyCoupon, removeCoupon, getTotals, getItemCount,
   } = useCartStore()
 
   const totals = getTotals()
-  const count = getItemCount()
+  const count  = getItemCount()
+
+  const [couponInput,   setCouponInput]   = useState('')
+  const [couponLoading, setCouponLoading] = useState(false)
 
   // Lock body scroll when drawer is open
   useEffect(() => {
     document.body.style.overflow = isOpen ? 'hidden' : ''
     return () => { document.body.style.overflow = '' }
   }, [isOpen])
+
+  const applyCouponCode = async () => {
+    if (!couponInput.trim()) return
+    setCouponLoading(true)
+    try {
+      const res  = await fetch('/api/coupons/validate', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ code: couponInput.trim().toUpperCase(), cart_total: totals.subtotal }),
+      })
+      const json = await res.json()
+      if (res.ok) {
+        applyCoupon(json.data.coupon as Coupon)
+        toast.success(json.data.message || 'Coupon applied!')
+        setCouponInput('')
+      } else {
+        toast.error(json.error || 'Invalid coupon')
+      }
+    } catch {
+      toast.error('Could not validate coupon')
+    } finally {
+      setCouponLoading(false)
+    }
+  }
 
   return (
     <>
@@ -82,14 +111,25 @@ export default function CartDrawer() {
             <ul className="space-y-3">
               {items.map(({ product, quantity }) => (
                 <li key={product.id} className="flex items-center gap-3 py-3 border-b border-cream-dark last:border-0">
-                  {/* Product image */}
-                  <div className="w-14 h-14 bg-cream rounded-2xl flex items-center justify-center text-3xl shrink-0">
-                    {product.emoji || '📦'}
+                  {/* Product image or emoji */}
+                  <div className="w-14 h-14 bg-cream rounded-2xl flex items-center justify-center shrink-0 overflow-hidden">
+                    {product.image_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={product.image_url}
+                        alt={product.name}
+                        className="w-full h-full object-contain"
+                      />
+                    ) : (
+                      <span className="text-3xl">{product.emoji || '📦'}</span>
+                    )}
                   </div>
 
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-green-deep truncate">{product.name}</p>
-                    <p className="text-xs text-gray-400 mt-0.5">{product.weight} · ₹{product.price} each</p>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      {[product.brand, product.weight, `₹${product.price} each`].filter(Boolean).join(' · ')}
+                    </p>
                   </div>
 
                   {/* Qty + remove */}
@@ -127,7 +167,7 @@ export default function CartDrawer() {
           )}
         </div>
 
-        {/* Footer with totals */}
+        {/* Footer */}
         {items.length > 0 && (
           <div className="bg-cream px-6 py-5 border-t border-cream-dark space-y-3">
             {/* Free delivery progress */}
@@ -146,19 +186,48 @@ export default function CartDrawer() {
               </div>
             )}
 
-            {/* Coupon applied */}
-            {coupon && (
-              <div className="flex items-center justify-between bg-green-muted/10 rounded-xl px-3 py-2">
+            {/* Coupon input / applied state */}
+            {coupon ? (
+              <div className="flex items-center justify-between bg-green-muted/10 border border-green-muted/30 rounded-xl px-3 py-2.5">
                 <div className="flex items-center gap-2 text-green-light">
                   <Tag size={13} />
-                  <span className="text-xs font-semibold">{coupon.code} applied</span>
+                  <div>
+                    <p className="text-xs font-bold">{coupon.code} applied!</p>
+                    <p className="text-xs text-green-600">You save ₹{totals.discountAmount.toFixed(0)}</p>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-green-light">−₹{totals.discountAmount}</span>
-                  <button onClick={removeCoupon} className="text-gray-400 hover:text-red-fresh">
-                    <X size={12} />
-                  </button>
+                <button
+                  onClick={removeCoupon}
+                  className="text-gray-400 hover:text-red-fresh transition-colors"
+                  aria-label="Remove coupon"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Tag size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="text"
+                    value={couponInput}
+                    onChange={e => setCouponInput(e.target.value.toUpperCase())}
+                    onKeyDown={e => e.key === 'Enter' && applyCouponCode()}
+                    placeholder="Coupon code"
+                    maxLength={20}
+                    className="w-full pl-8 pr-3 py-2.5 text-sm border border-cream-dark rounded-xl bg-white
+                               focus:outline-none focus:border-green-muted focus:ring-1 focus:ring-green-muted/30
+                               placeholder:text-gray-400 text-green-deep transition-colors"
+                  />
                 </div>
+                <button
+                  onClick={applyCouponCode}
+                  disabled={couponLoading || !couponInput.trim()}
+                  className="px-4 py-2.5 bg-green-deep text-white rounded-xl text-sm font-semibold
+                             hover:bg-green-mid transition-colors disabled:opacity-40"
+                >
+                  {couponLoading ? '…' : 'Apply'}
+                </button>
               </div>
             )}
 

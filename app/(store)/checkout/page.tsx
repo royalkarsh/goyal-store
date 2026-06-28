@@ -9,7 +9,6 @@ import { useCartStore } from '@/lib/store/cart'
 import { createClient } from '@/lib/supabase/client'
 import toast from 'react-hot-toast'
 import Link from 'next/link'
-import type { Coupon } from '@/types'
 
 const schema = z.object({
   full_name:      z.string().min(2, 'Enter your full name'),
@@ -32,12 +31,10 @@ declare global {
 
 export default function CheckoutPage() {
   const router                  = useRouter()
-  const { items, coupon, getTotals, clearCart, applyCoupon, removeCoupon } = useCartStore()
+  const { items, coupon, getTotals, clearCart, removeCoupon } = useCartStore()
   const totals                  = getTotals()
   const [authLoading, setAuthLoading] = useState(true)
   const [submitting, setSubmitting]   = useState(false)
-  const [couponInput, setCouponInput] = useState('')
-  const [couponLoading, setCouponLoading] = useState(false)
 
   const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -55,24 +52,6 @@ export default function CheckoutPage() {
     }
     check()
   }, [items.length, router])
-
-  const applyCouponCode = async () => {
-    if (!couponInput.trim()) return
-    setCouponLoading(true)
-    const res  = await fetch('/api/coupons/validate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ code: couponInput.trim(), cart_total: totals.subtotal }),
-    })
-    const json = await res.json()
-    if (res.ok) {
-      applyCoupon(json.data.coupon as Coupon)
-      toast.success(json.data.message || 'Coupon applied!')
-    } else {
-      toast.error(json.error || 'Invalid coupon')
-    }
-    setCouponLoading(false)
-  }
 
   const loadRazorpay = () => new Promise<boolean>(resolve => {
     if (window.Razorpay) { resolve(true); return }
@@ -207,37 +186,25 @@ export default function CheckoutPage() {
               </div>
             </div>
 
-            {/* Coupon */}
-            <div className="bg-white rounded-2xl shadow-card p-5">
-              <h2 className="font-display font-bold text-green-deep mb-3">Coupon Code</h2>
-              {coupon ? (
-                <div className="flex items-center justify-between bg-green-50 border border-green-200 rounded-xl px-4 py-3">
+            {/* Coupon — applied state only (input is in the cart) */}
+            {coupon && (
+              <div className="bg-white rounded-2xl shadow-card p-4 flex items-center justify-between">
+                <div className="flex items-center gap-2 text-green-700">
+                  <span className="text-base">🏷️</span>
                   <div>
-                    <p className="text-sm font-bold text-green-700">{coupon.code} applied!</p>
-                    <p className="text-xs text-green-600">You save ₹{totals.discountAmount.toFixed(2)}</p>
+                    <p className="text-sm font-bold">{coupon.code} applied</p>
+                    <p className="text-xs text-green-600">Saving ₹{totals.discountAmount.toFixed(0)}</p>
                   </div>
-                  <button type="button" onClick={removeCoupon} className="text-xs text-red-500 font-semibold hover:text-red-700">Remove</button>
                 </div>
-              ) : (
-                <div className="flex gap-2">
-                  <input
-                    value={couponInput}
-                    onChange={e => setCouponInput(e.target.value.toUpperCase())}
-                    className="input-field flex-1 text-sm"
-                    placeholder="Enter coupon code"
-                    maxLength={20}
-                  />
-                  <button
-                    type="button"
-                    onClick={applyCouponCode}
-                    disabled={couponLoading}
-                    className="px-5 py-3 bg-green-deep text-white rounded-xl text-sm font-semibold hover:bg-green-mid transition-colors disabled:opacity-50"
-                  >
-                    {couponLoading ? '…' : 'Apply'}
-                  </button>
-                </div>
-              )}
-            </div>
+                <button
+                  type="button"
+                  onClick={removeCoupon}
+                  className="text-xs text-red-500 font-semibold hover:text-red-700 transition-colors"
+                >
+                  Remove
+                </button>
+              </div>
+            )}
 
             {/* Payment */}
             <div className="bg-white rounded-2xl shadow-card p-5">
@@ -268,12 +235,25 @@ export default function CheckoutPage() {
               <div className="space-y-3 mb-4 max-h-52 overflow-y-auto scrollbar-hide">
                 {items.map(item => (
                   <div key={item.product.id} className="flex items-center gap-3">
-                    <span className="text-xl shrink-0">{item.product.emoji || '📦'}</span>
+                    <div className="w-10 h-10 bg-cream rounded-xl flex items-center justify-center shrink-0 overflow-hidden">
+                      {item.product.image_url ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={item.product.image_url}
+                          alt={item.product.name}
+                          className="w-full h-full object-contain"
+                        />
+                      ) : (
+                        <span className="text-lg">{item.product.emoji || '📦'}</span>
+                      )}
+                    </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-green-deep truncate">{item.product.name}</p>
-                      <p className="text-xs text-gray-400">× {item.quantity}</p>
+                      <p className="text-xs text-gray-400">
+                        {item.product.brand ? `${item.product.brand} · ` : ''}× {item.quantity}
+                      </p>
                     </div>
-                    <p className="text-sm font-bold text-green-deep shrink-0">₹{(item.product.price * item.quantity).toFixed(2)}</p>
+                    <p className="text-sm font-bold text-green-deep shrink-0">₹{(item.product.price * item.quantity).toFixed(0)}</p>
                   </div>
                 ))}
               </div>
