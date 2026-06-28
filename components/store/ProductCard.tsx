@@ -87,13 +87,12 @@ export default function ProductCard({ product }: Props) {
 
       {/* Info */}
       <div className="p-4 flex flex-col flex-1">
-        <p className="text-xs text-green-muted font-medium uppercase tracking-wide mb-1">
-          {product.category?.name || product.brand || ''}
-        </p>
         <h3 className="text-sm font-semibold text-green-deep leading-snug mb-1 line-clamp-2">
           {product.name}
         </h3>
-        <p className="text-xs text-gray-400 mb-3">{product.weight}</p>
+        <p className="text-xs text-gray-400 mb-3">
+          {[product.brand, product.weight].filter(Boolean).join(' · ')}
+        </p>
 
         {/* Price + CTA */}
         <div className="flex items-center justify-between mt-auto">
