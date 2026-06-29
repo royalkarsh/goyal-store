@@ -5,6 +5,34 @@ import { Search, X, ArrowRight, TrendingUp, Mic, MicOff } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import type { Product } from '@/types'
 
+// Common Hindi grocery words → English search terms
+// Used when speech recognition returns Devanagari script
+const HINDI_MAP: Record<string, string> = {
+  'आटा': 'atta', 'गेहूं': 'wheat', 'चावल': 'rice', 'चीनी': 'sugar',
+  'नमक': 'salt', 'तेल': 'oil', 'सरसों': 'mustard', 'सरसों का तेल': 'mustard oil',
+  'दाल': 'dal', 'चना': 'chana', 'मूंग': 'moong', 'उड़द': 'urad', 'मसूर': 'masoor',
+  'चाय': 'tea', 'कॉफी': 'coffee', 'नेस्कैफे': 'nescafe', 'दूध': 'milk',
+  'दही': 'curd', 'पनीर': 'paneer', 'मक्खन': 'butter', 'बटर': 'butter', 'घी': 'ghee',
+  'ब्रेड': 'bread', 'बिस्कुट': 'biscuit', 'नमकीन': 'namkeen', 'चिप्स': 'chips',
+  'मैगी': 'maggi', 'नूडल्स': 'noodles', 'पास्ता': 'pasta',
+  'हल्दी': 'turmeric', 'मिर्च': 'chilli', 'धनिया': 'coriander',
+  'जीरा': 'jeera', 'मसाला': 'masala', 'बेसन': 'besan', 'मैदा': 'maida',
+  'सूजी': 'suji', 'पोहा': 'poha', 'राजमा': 'rajma',
+  'साबुन': 'soap', 'शैंपू': 'shampoo', 'टूथपेस्ट': 'toothpaste',
+  'अमूल': 'amul', 'टाटा': 'tata', 'पतंजलि': 'patanjali', 'डाबर': 'dabur',
+  'कुरकुरे': 'kurkure', 'चॉकलेट': 'chocolate', 'जूस': 'juice',
+  'केचप': 'ketchup', 'सॉस': 'sauce', 'अचार': 'pickle', 'पापड़': 'papad',
+  'शक्कर': 'sugar', 'गुड़': 'jaggery',
+}
+
+function translateHindi(text: string): string {
+  if (!/[ऀ-ॿ]/.test(text)) return text  // no Devanagari → return as-is
+  const t = text.trim()
+  if (HINDI_MAP[t]) return HINDI_MAP[t]
+  // word-by-word fallback
+  return t.split(/\s+/).map(w => HINDI_MAP[w] || w).join(' ')
+}
+
 const QUICK_SEARCHES = [
   { label: '🌾 Atta',  q: 'atta'  },
   { label: '🛢️ Oil',   q: 'oil'   },
@@ -80,7 +108,7 @@ export default function SearchOverlay({ isOpen, onClose }: Props) {
     stopListening()
 
     const recognition = new SR()
-    recognition.lang            = 'hi-IN'   // Hindi first; also recognises common Indian English
+    recognition.lang            = 'en-IN'   // Indian English — returns "atta", "dal", "Amul" in Latin script
     recognition.interimResults  = true
     recognition.maxAlternatives = 1
     recognition.continuous      = false
@@ -95,10 +123,10 @@ export default function SearchOverlay({ isOpen, onClose }: Props) {
         else                       live  += e.results[i][0].transcript
       }
       if (final) {
-        setQuery(q => (q + ' ' + final).trim())
+        setQuery(q => (q + ' ' + translateHindi(final)).trim())
         setInterim('')
       } else {
-        setInterim(live)
+        setInterim(translateHindi(live))
       }
     }
 

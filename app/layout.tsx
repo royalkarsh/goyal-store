@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from 'next'
 import { Syne, Inter } from 'next/font/google'
 import './globals.css'
 import { Toaster } from 'react-hot-toast'
+import { SpeedInsights } from '@vercel/speed-insights/next'
 
 const syne = Syne({
   subsets: ['latin'],
@@ -41,6 +42,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" className={`${syne.variable} ${inter.variable}`}>
       <body className="bg-cream font-inter antialiased">
         {children}
+        <SpeedInsights />
         <Toaster
           position="bottom-center"
           toastOptions={{
