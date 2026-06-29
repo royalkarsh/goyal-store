@@ -1,34 +1,50 @@
 'use client'
 // components/store/SearchOverlay.tsx
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Search, X, ArrowRight, TrendingUp } from 'lucide-react'
+import { Search, X, ArrowRight, TrendingUp, Mic, MicOff } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import type { Product } from '@/types'
 
 const QUICK_SEARCHES = [
-  { label: '🌾 Atta', q: 'atta' },
-  { label: '🛢️ Oil', q: 'oil' },
+  { label: '🌾 Atta',  q: 'atta'  },
+  { label: '🛢️ Oil',   q: 'oil'   },
   { label: '🥛 Dairy', q: 'dairy' },
-  { label: '☕ Tea', q: 'tea' },
+  { label: '☕ Tea',   q: 'tea'   },
   { label: '🍜 Maggi', q: 'maggi' },
-  { label: '🧂 Salt', q: 'salt' },
+  { label: '🧂 Salt',  q: 'salt'  },
 ]
 
+type VoiceState = 'idle' | 'listening' | 'unsupported'
+
 interface Props {
-  isOpen: boolean
+  isOpen:  boolean
   onClose: () => void
 }
 
 export default function SearchOverlay({ isOpen, onClose }: Props) {
-  const [query, setQuery] = useState('')
-  const [results, setResults] = useState<Product[]>([])
-  const [loading, setLoading] = useState(false)
+  const [query,       setQuery]       = useState('')
+  const [results,     setResults]     = useState<Product[]>([])
+  const [loading,     setLoading]     = useState(false)
+  const [voiceState,  setVoiceState]  = useState<VoiceState>('idle')
+  const [interim,     setInterim]     = useState('')   // live transcript preview
+
   const inputRef = useRef<HTMLInputElement>(null)
+  const recognitionRef = useRef<any>(null)
   const router = useRouter()
 
+  // Check Web Speech API support once
   useEffect(() => {
-    if (isOpen) setTimeout(() => inputRef.current?.focus(), 80)
-    else setQuery('')
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+    if (!SR) setVoiceState('unsupported')
+  }, [])
+
+  useEffect(() => {
+    if (isOpen)  setTimeout(() => inputRef.current?.focus(), 80)
+    else {
+      setQuery('')
+      stopListening()
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen])
 
   const search = useCallback(async (q: string) => {
@@ -50,16 +66,65 @@ export default function SearchOverlay({ isOpen, onClose }: Props) {
     return () => clearTimeout(timeout)
   }, [query, search])
 
+  const stopListening = () => {
+    recognitionRef.current?.stop()
+    recognitionRef.current = null
+    setVoiceState(v => v === 'listening' ? 'idle' : v)
+    setInterim('')
+  }
+
+  const startListening = () => {
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+    if (!SR) return
+
+    stopListening()
+
+    const recognition = new SR()
+    recognition.lang            = 'hi-IN'   // Hindi first; also recognises common Indian English
+    recognition.interimResults  = true
+    recognition.maxAlternatives = 1
+    recognition.continuous      = false
+
+    recognition.onstart = () => { setVoiceState('listening'); setInterim('') }
+
+    recognition.onresult = (e: any) => {
+      let final = ''
+      let live  = ''
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        if (e.results[i].isFinal) final += e.results[i][0].transcript
+        else                       live  += e.results[i][0].transcript
+      }
+      if (final) {
+        setQuery(q => (q + ' ' + final).trim())
+        setInterim('')
+      } else {
+        setInterim(live)
+      }
+    }
+
+    recognition.onerror = () => stopListening()
+    recognition.onend   = ()  => { setVoiceState('idle'); setInterim('') }
+
+    recognitionRef.current = recognition
+    recognition.start()
+  }
+
+  const toggleVoice = () => {
+    if (voiceState === 'listening') stopListening()
+    else startListening()
+  }
+
   const handleSelect = (product: Product) => {
     onClose()
     router.push(`/products/${product.slug}`)
   }
 
-  const handleQuick = (q: string) => {
-    setQuery(q)
-  }
-
   if (!isOpen) return null
+
+  const displayValue = voiceState === 'listening' && interim ? interim : query
+  const placeholder  = voiceState === 'listening'
+    ? 'सुन रहा हूँ… बोलिए'
+    : 'Search atta, dal, oil, snacks…'
 
   return (
     <div
@@ -68,15 +133,16 @@ export default function SearchOverlay({ isOpen, onClose }: Props) {
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <div className="w-full max-w-xl mx-4 animate-fade-in">
-        {/* Input */}
-        <div className="flex items-center gap-3 bg-white rounded-2xl px-5 py-4 shadow-2xl">
+        {/* Input row */}
+        <div className={`flex items-center gap-3 bg-white rounded-2xl px-5 py-4 shadow-2xl transition-all duration-200
+          ${voiceState === 'listening' ? 'ring-2 ring-red-400' : ''}`}>
           <Search size={20} className="text-gray-400 shrink-0" />
           <input
             ref={inputRef}
             type="search"
-            value={query}
-            onChange={e => setQuery(e.target.value)}
-            placeholder="Search atta, dal, oil, snacks…"
+            value={displayValue}
+            onChange={e => { if (voiceState !== 'listening') setQuery(e.target.value) }}
+            placeholder={placeholder}
             className="flex-1 text-base text-green-deep placeholder:text-gray-400 outline-none bg-transparent"
             onKeyDown={e => {
               if (e.key === 'Escape') onClose()
@@ -86,13 +152,44 @@ export default function SearchOverlay({ isOpen, onClose }: Props) {
               }
             }}
           />
+
+          {/* Mic button — hidden when unsupported */}
+          {voiceState !== 'unsupported' && (
+            <button
+              onClick={toggleVoice}
+              title={voiceState === 'listening' ? 'Stop' : 'Voice search'}
+              className={`w-9 h-9 flex items-center justify-center rounded-xl transition-all duration-200 shrink-0
+                ${voiceState === 'listening'
+                  ? 'bg-red-500 text-white animate-pulse'
+                  : 'bg-cream-dark hover:bg-saffron hover:text-green-deep text-gray-500'}`}
+            >
+              {voiceState === 'listening' ? <MicOff size={16} /> : <Mic size={16} />}
+            </button>
+          )}
+
           <button
             onClick={onClose}
-            className="bg-cream-dark hover:bg-gray-200 text-gray-500 text-xs px-3 py-1.5 rounded-lg transition-colors"
+            className="bg-cream-dark hover:bg-gray-200 text-gray-500 text-xs px-3 py-1.5 rounded-lg transition-colors shrink-0"
           >
             ESC
           </button>
         </div>
+
+        {/* Listening indicator */}
+        {voiceState === 'listening' && (
+          <div className="mt-2 flex items-center justify-center gap-2 text-white/80 text-sm">
+            <span className="flex gap-1">
+              {[...Array(3)].map((_, i) => (
+                <span
+                  key={i}
+                  className="w-1.5 bg-saffron rounded-full animate-bounce"
+                  style={{ height: '12px', animationDelay: `${i * 0.15}s` }}
+                />
+              ))}
+            </span>
+            <span>बोलिए… <span className="text-white/50">Bol dijiye</span></span>
+          </div>
+        )}
 
         {/* Results */}
         {query && (
@@ -143,8 +240,8 @@ export default function SearchOverlay({ isOpen, onClose }: Props) {
           </div>
         )}
 
-        {/* Quick searches (shown when no query) */}
-        {!query && (
+        {/* Quick searches (shown when no query and not listening) */}
+        {!query && voiceState !== 'listening' && (
           <div className="mt-4">
             <div className="flex items-center gap-2 mb-3">
               <TrendingUp size={14} className="text-white/50" />
@@ -154,7 +251,7 @@ export default function SearchOverlay({ isOpen, onClose }: Props) {
               {QUICK_SEARCHES.map(({ label, q }) => (
                 <button
                   key={q}
-                  onClick={() => handleQuick(q)}
+                  onClick={() => setQuery(q)}
                   className="bg-white/15 hover:bg-saffron hover:text-green-deep text-white border border-white/25
                              rounded-full px-4 py-2 text-sm font-medium transition-all duration-200"
                 >
