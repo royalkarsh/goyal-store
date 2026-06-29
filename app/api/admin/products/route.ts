@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
   const adminSupabase = await createAdminClient()
   let query = adminSupabase
     .from('products')
-    .select(`*, category:categories(name, slug)`, { count: 'exact' })
+    .select(`*, category:categories(name, slug), subcategory:subcategories(name, slug)`, { count: 'exact' })
     .order('created_at', { ascending: false })
     .range(from, from + limit - 1)
 

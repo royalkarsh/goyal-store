@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Plus, Search, Edit2, ToggleLeft, ToggleRight, AlertTriangle, Package, ScanLine, X } from 'lucide-react'
+import { Plus, Search, Edit2, ToggleLeft, ToggleRight, AlertTriangle, Package, ScanLine, X, ChevronRight } from 'lucide-react'
 import toast from 'react-hot-toast'
 import type { Product, Category } from '@/types'
 import BarcodeScanner, { type BarcodeProductData } from '@/components/admin/BarcodeScanner'
@@ -220,12 +220,20 @@ export default function AdminProductsPage() {
           <h1 className="font-display font-extrabold text-2xl text-green-deep">Products</h1>
           <p className="text-sm text-gray-500 mt-0.5">{total} products total</p>
         </div>
-        <Link
-          href="/admin/products/new"
-          className="flex items-center gap-2 bg-green-deep text-white px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-green-mid transition-colors"
-        >
-          <Plus size={16} /> Add Product
-        </Link>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowScanner(true)}
+            className="flex items-center gap-2 bg-saffron text-green-deep px-4 py-2.5 rounded-xl text-sm font-bold hover:opacity-90 transition-opacity"
+          >
+            <ScanLine size={16} /> Quick Scan
+          </button>
+          <Link
+            href="/admin/products/new"
+            className="flex items-center gap-2 bg-green-deep text-white px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-green-mid transition-colors"
+          >
+            <Plus size={16} /> Add Product
+          </Link>
+        </div>
       </div>
 
       {/* Filters */}
@@ -287,8 +295,14 @@ export default function AdminProductsPage() {
                           </div>
                         </div>
                       </td>
-                      <td className="px-5 py-3 text-sm text-gray-600">
-                        {(product as any).category?.name || '—'}
+                      <td className="px-5 py-3">
+                        <p className="text-sm text-gray-600">{(product as any).category?.name || '—'}</p>
+                        {(product as any).subcategory?.name && (
+                          <p className="text-xs text-gray-400 flex items-center gap-0.5 mt-0.5">
+                            <ChevronRight size={10} className="shrink-0" />
+                            {(product as any).subcategory.name}
+                          </p>
+                        )}
                       </td>
                       <td className="px-5 py-3">
                         <p className="text-sm font-bold text-green-deep">₹{product.price}</p>
@@ -364,13 +378,6 @@ export default function AdminProductsPage() {
         )}
       </div>
 
-      {/* Floating Quick Scan button */}
-      <button
-        onClick={() => setShowScanner(true)}
-        className="fixed bottom-6 right-6 flex items-center gap-2 bg-saffron text-green-deep px-5 py-3.5 rounded-full text-sm font-bold shadow-lg hover:opacity-90 hover:-translate-y-0.5 transition-all duration-200 z-40"
-      >
-        <ScanLine size={18} /> Quick Scan
-      </button>
     </div>
   )
 }
