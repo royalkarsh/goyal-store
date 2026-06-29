@@ -13,8 +13,9 @@ const razorpay = new Razorpay({
   key_secret: process.env.RAZORPAY_KEY_SECRET!,
 })
 
-const FREE_DELIVERY_ABOVE = Number(process.env.NEXT_PUBLIC_FREE_DELIVERY_ABOVE || 299)
-const DELIVERY_CHARGE = 30
+const FREE_DELIVERY_ABOVE = 1000
+const DELIVERY_CHARGE     = 30
+const MIN_ORDER_AMOUNT    = 200
 
 export async function GET(request: NextRequest) {
   const supabase = await createClient()
@@ -102,6 +103,11 @@ export async function POST(request: NextRequest) {
   const subtotal = orderItems.reduce((sum, i) => sum + i.subtotal, 0)
   const taxAmount = 0 // prices are tax-inclusive
 
+  // Minimum order check
+  if (subtotal < MIN_ORDER_AMOUNT) {
+    return apiError(`Minimum order amount is ₹${MIN_ORDER_AMOUNT}. Add ₹${(MIN_ORDER_AMOUNT - subtotal).toFixed(0)} more.`)
+  }
+
   // ── Validate coupon ──────────────────────────────────────
   let discountAmount = 0
   if (data.coupon_code) {
@@ -158,6 +164,7 @@ export async function POST(request: NextRequest) {
       payment_status:   'pending',
       payment_method:   data.payment_method,
       delivery_address: deliveryAddress,
+      delivery_slot:    data.delivery_slot,
       subtotal:         +subtotal.toFixed(2),
       discount_amount:  discountAmount,
       delivery_charge:  deliveryCharge,

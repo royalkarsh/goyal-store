@@ -137,6 +137,11 @@ export default async function OrderDetailPage({ params }: Props) {
             {addr?.landmark && <>{addr.landmark}<br /></>}
             {addr?.city} — {addr?.pincode}
           </address>
+          {(order as any).delivery_slot && (
+            <p className="text-xs text-green-deep font-semibold mt-3 pt-3 border-t border-cream-dark">
+              🕐 {(order as any).delivery_slot}
+            </p>
+          )}
         </div>
         <div className="bg-white rounded-2xl shadow-card p-5">
           <h2 className="font-display font-bold text-green-deep mb-3">Payment</h2>

@@ -115,6 +115,7 @@ export const orderSchema = z.object({
   city:           z.string().min(2).max(100),
   pincode:        pincodeSchema,
   payment_method: z.enum(['razorpay', 'cod', 'upi', 'card', 'netbanking']),
+  delivery_slot:  z.string().min(1, 'Select a delivery slot').max(100),
   coupon_code:    z.string().max(20).optional(),
   customer_note:  z.string().max(500).optional(),
   items:          z.array(z.object({

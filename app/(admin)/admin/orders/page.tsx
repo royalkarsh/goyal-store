@@ -184,6 +184,11 @@ export default function AdminOrdersPage() {
                                   {(order.delivery_address as any)?.line2}<br />
                                   {(order.delivery_address as any)?.city} — {(order.delivery_address as any)?.pincode}
                                 </p>
+                                {(order as any).delivery_slot && (
+                                  <p className="text-xs text-green-deep font-semibold mt-2 pt-2 border-t border-cream-dark">
+                                    🕐 {(order as any).delivery_slot}
+                                  </p>
+                                )}
                               </div>
                             </div>
                           </td>

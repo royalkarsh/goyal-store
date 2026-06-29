@@ -3,11 +3,11 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { X, ShoppingBag, Minus, Plus, Trash2, Tag } from 'lucide-react'
-import { useCartStore } from '@/lib/store/cart'
+import { useCartStore, MIN_ORDER_AMOUNT } from '@/lib/store/cart'
 import toast from 'react-hot-toast'
 import type { Coupon } from '@/types'
 
-const FREE_DELIVERY_ABOVE = 299
+const FREE_DELIVERY_ABOVE = 1000
 
 export default function CartDrawer() {
   const {
@@ -259,16 +259,37 @@ export default function CartDrawer() {
               </div>
             </div>
 
+            {/* Minimum order warning */}
+            {totals.subtotal < MIN_ORDER_AMOUNT && (
+              <div className="bg-orange-50 border border-orange-200 rounded-2xl px-4 py-3 text-center">
+                <p className="text-xs font-semibold text-orange-700">
+                  Minimum order is ₹{MIN_ORDER_AMOUNT}
+                </p>
+                <p className="text-xs text-orange-500 mt-0.5">
+                  Add ₹{(MIN_ORDER_AMOUNT - totals.subtotal).toFixed(0)} more to place your order
+                </p>
+              </div>
+            )}
+
             {/* Checkout CTA */}
-            <Link
-              href="/checkout"
-              onClick={closeCart}
-              className="block w-full bg-green-deep text-white text-center rounded-full py-4 text-sm font-semibold
-                         hover:bg-green-mid active:scale-98 transition-all duration-200
-                         shadow-lg hover:shadow-xl"
-            >
-              Proceed to Checkout →
-            </Link>
+            {totals.subtotal >= MIN_ORDER_AMOUNT ? (
+              <Link
+                href="/checkout"
+                onClick={closeCart}
+                className="block w-full bg-green-deep text-white text-center rounded-full py-4 text-sm font-semibold
+                           hover:bg-green-mid active:scale-98 transition-all duration-200
+                           shadow-lg hover:shadow-xl"
+              >
+                Proceed to Checkout →
+              </Link>
+            ) : (
+              <button
+                disabled
+                className="w-full bg-gray-200 text-gray-400 rounded-full py-4 text-sm font-semibold cursor-not-allowed"
+              >
+                Proceed to Checkout →
+              </button>
+            )}
             <p className="text-center text-xs text-gray-400">
               🚀 Free delivery on orders above ₹{FREE_DELIVERY_ABOVE}
             </p>

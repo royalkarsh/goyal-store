@@ -5,8 +5,9 @@ import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 import type { CartItem, Product, Coupon, CartTotals } from '@/types'
 
-const FREE_DELIVERY_ABOVE = Number(process.env.NEXT_PUBLIC_FREE_DELIVERY_ABOVE || 299)
-const DELIVERY_CHARGE = 30
+const FREE_DELIVERY_ABOVE = 1000
+const DELIVERY_CHARGE     = 30
+export const MIN_ORDER_AMOUNT = 200
 const GST_RATE = 0
 
 interface CartState {
