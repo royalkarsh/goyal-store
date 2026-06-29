@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { LogOut, User, Edit2, Check, X, ShoppingBag, Store } from 'lucide-react'
+// createClient still used for auth.getUser + logout
 import Link from 'next/link'
 import toast from 'react-hot-toast'
 
@@ -68,17 +69,14 @@ export default function ProfilePage() {
 
     setSaving(true)
     try {
-      const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('Not logged in')
-
       const value = draftVal.trim() || null
-      const { error } = await supabase
-        .from('profiles')
-        .update({ [editing]: value })
-        .eq('id', user.id)
-
-      if (error) throw error
+      const res  = await fetch('/api/profile', {
+        method:  'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ [editing]: value ?? '' }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Failed to save')
 
       setProfile(prev => prev ? { ...prev, [editing]: value } : prev)
       toast.success('Saved!')
