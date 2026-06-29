@@ -180,21 +180,6 @@ export default function SearchOverlay({ isOpen, onClose }: Props) {
               }
             }}
           />
-
-          {/* Mic button — hidden when unsupported */}
-          {voiceState !== 'unsupported' && (
-            <button
-              onClick={toggleVoice}
-              title={voiceState === 'listening' ? 'Stop' : 'Voice search'}
-              className={`w-9 h-9 flex items-center justify-center rounded-xl transition-all duration-200 shrink-0
-                ${voiceState === 'listening'
-                  ? 'bg-red-500 text-white animate-pulse'
-                  : 'bg-cream-dark hover:bg-saffron hover:text-green-deep text-gray-500'}`}
-            >
-              {voiceState === 'listening' ? <MicOff size={16} /> : <Mic size={16} />}
-            </button>
-          )}
-
           <button
             onClick={onClose}
             className="bg-cream-dark hover:bg-gray-200 text-gray-500 text-xs px-3 py-1.5 rounded-lg transition-colors shrink-0"
@@ -203,19 +188,38 @@ export default function SearchOverlay({ isOpen, onClose }: Props) {
           </button>
         </div>
 
-        {/* Listening indicator */}
-        {voiceState === 'listening' && (
-          <div className="mt-2 flex items-center justify-center gap-2 text-white/80 text-sm">
-            <span className="flex gap-1">
-              {[...Array(3)].map((_, i) => (
-                <span
-                  key={i}
-                  className="w-1.5 bg-saffron rounded-full animate-bounce"
-                  style={{ height: '12px', animationDelay: `${i * 0.15}s` }}
-                />
-              ))}
-            </span>
-            <span>बोलिए… <span className="text-white/50">Bol dijiye</span></span>
+        {/* Mic button — large standalone, easy to tap on phone */}
+        {voiceState !== 'unsupported' && (
+          <div className="flex flex-col items-center mt-5">
+            <button
+              onPointerDown={e => { e.stopPropagation(); toggleVoice() }}
+              aria-label={voiceState === 'listening' ? 'Stop listening' : 'Search by voice'}
+              className={`w-16 h-16 rounded-full flex items-center justify-center shadow-lg transition-all duration-200 active:scale-95
+                ${voiceState === 'listening'
+                  ? 'bg-red-500 text-white scale-110 shadow-red-500/40'
+                  : 'bg-white text-green-deep hover:bg-saffron'}`}
+            >
+              {voiceState === 'listening'
+                ? <MicOff size={26} />
+                : <Mic size={26} />}
+            </button>
+
+            {voiceState === 'listening' ? (
+              <div className="mt-3 flex items-center gap-2 text-white/90 text-sm">
+                <span className="flex gap-1 items-end">
+                  {[...Array(4)].map((_, i) => (
+                    <span
+                      key={i}
+                      className="w-1 bg-saffron rounded-full animate-bounce"
+                      style={{ height: `${10 + i * 4}px`, animationDelay: `${i * 0.12}s` }}
+                    />
+                  ))}
+                </span>
+                <span>बोलिए… <span className="text-white/50 text-xs">Bol dijiye</span></span>
+              </div>
+            ) : (
+              <p className="mt-2 text-white/50 text-xs">Tap mic &amp; speak</p>
+            )}
           </div>
         )}
 
