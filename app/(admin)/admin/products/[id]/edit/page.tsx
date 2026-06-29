@@ -33,8 +33,16 @@ const formSchema = z.object({
 
 type FormData = z.infer<typeof formSchema>
 
-export default function EditProductPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params)
+export default function EditProductPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>
+  searchParams: Promise<{ from?: string }>
+}) {
+  const { id }   = use(params)
+  const { from } = use(searchParams)
+  const backUrl  = from ? `/admin/products?page=${from}` : '/admin/products'
   const router  = useRouter()
   const [categories,    setCategories]    = useState<Category[]>([])
   const [subcategories, setSubcategories] = useState<Subcategory[]>([])
@@ -105,7 +113,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
     const json = await res.json()
     if (res.ok) {
       toast.success('Product updated!')
-      router.push('/admin/products')
+      router.push(backUrl)
     } else {
       toast.error(json.error || 'Failed to update')
       setSubmitting(false)
@@ -118,7 +126,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
     const res = await fetch(`/api/admin/products/${id}`, { method: 'DELETE' })
     if (res.ok) {
       toast.success('Product deactivated')
-      router.push('/admin/products')
+      router.push(backUrl)
     } else {
       toast.error('Failed to deactivate')
       setDeleting(false)
@@ -136,7 +144,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
     <div className="max-w-3xl">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <button onClick={() => router.back()} className="text-green-deep hover:text-green-light">
+          <button onClick={() => router.push(backUrl)} className="text-green-deep hover:text-green-light">
             <ArrowLeft size={20} />
           </button>
           <div>
@@ -279,7 +287,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
         </div>
 
         <div className="flex gap-3">
-          <button type="button" onClick={() => router.back()}
+          <button type="button" onClick={() => router.push(backUrl)}
             className="flex-1 py-3 border border-cream-dark rounded-xl text-sm font-semibold text-green-deep hover:bg-cream transition-colors">
             Cancel
           </button>

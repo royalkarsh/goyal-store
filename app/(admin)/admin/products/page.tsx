@@ -2,7 +2,7 @@
 // app/(admin)/admin/products/page.tsx
 import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Plus, Search, Edit2, ToggleLeft, ToggleRight, AlertTriangle, Package, ScanLine, X, ChevronRight } from 'lucide-react'
 import toast from 'react-hot-toast'
 import type { Product, Category } from '@/types'
@@ -143,11 +143,12 @@ function QuickAddModal({
 
 // ── Main page ──────────────────────────────────────────────────────────────────
 export default function AdminProductsPage() {
-  const router = useRouter()
+  const router       = useRouter()
+  const searchParams = useSearchParams()
   const [products,    setProducts]    = useState<Product[]>([])
   const [categories,  setCategories]  = useState<Category[]>([])
   const [total,       setTotal]       = useState(0)
-  const [page,        setPage]        = useState(1)
+  const [page,        setPage]        = useState(() => Math.max(1, Number(searchParams.get('page') || 1)))
   const [loading,     setLoading]     = useState(true)
   const [search,      setSearch]      = useState('')
   const [showScanner, setShowScanner] = useState(false)
@@ -326,7 +327,7 @@ export default function AdminProductsPage() {
                       <td className="px-5 py-3">
                         <div className="flex items-center gap-2">
                           <Link
-                            href={`/admin/products/${product.id}/edit`}
+                            href={`/admin/products/${product.id}/edit?from=${page}`}
                             className="p-1.5 text-green-deep hover:bg-cream rounded-lg transition-colors"
                           >
                             <Edit2 size={15} />
