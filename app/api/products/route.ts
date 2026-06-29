@@ -37,8 +37,19 @@ export async function GET(request: NextRequest) {
     if (cat) query = query.eq('category_id', cat.id)
   }
 
+  const subcategory = searchParams.get('subcategory')
+
   if (search) {
     query = query.or(`name.ilike.%${search}%,brand.ilike.%${search}%`)
+  }
+
+  if (subcategory) {
+    const { data: sub } = await supabase
+      .from('subcategories')
+      .select('id')
+      .eq('slug', subcategory)
+      .single()
+    if (sub) query = query.eq('subcategory_id', sub.id)
   }
 
   if (featured === 'true') {

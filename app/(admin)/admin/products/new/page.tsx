@@ -7,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { ArrowLeft, ScanLine } from 'lucide-react'
 import toast from 'react-hot-toast'
-import type { Category } from '@/types'
+import type { Category, Subcategory } from '@/types'
 import ImageUpload from '@/components/admin/ImageUpload'
 import BarcodeScanner, { type BarcodeProductData } from '@/components/admin/BarcodeScanner'
 
@@ -15,6 +15,7 @@ const formSchema = z.object({
   name:                z.string().min(2, 'Name must be at least 2 characters').max(200),
   description:         z.string().max(2000).optional(),
   category_id:         z.string().min(1, 'Select a category'),
+  subcategory_id:      z.string().optional(),
   brand:               z.string().max(100).optional(),
   weight:              z.string().max(50).optional(),
   unit:                z.string().min(1, 'Unit is required').max(20),
@@ -43,13 +44,14 @@ function AutoBadge() {
 
 export default function NewProductPage() {
   const router = useRouter()
-  const [categories,   setCategories]   = useState<Category[]>([])
-  const [submitting,   setSubmitting]   = useState(false)
-  const [imageUrl,     setImageUrl]     = useState<string | null>(null)
-  const [showScanner,  setShowScanner]  = useState(false)
-  const [autofilled,   setAutofilled]   = useState<Set<string>>(new Set())
+  const [categories,    setCategories]    = useState<Category[]>([])
+  const [subcategories, setSubcategories] = useState<Subcategory[]>([])
+  const [submitting,    setSubmitting]    = useState(false)
+  const [imageUrl,      setImageUrl]      = useState<string | null>(null)
+  const [showScanner,   setShowScanner]   = useState(false)
+  const [autofilled,    setAutofilled]    = useState<Set<string>>(new Set())
 
-  const { register, handleSubmit, setValue, formState: { errors } } = useForm<FormData>({
+  const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       unit: 'pcs', tax_rate: 0, stock_qty: 0, low_stock_threshold: 5,
@@ -57,11 +59,25 @@ export default function NewProductPage() {
     },
   })
 
+  const watchedCategoryId = watch('category_id')
+
   useEffect(() => {
     fetch('/api/admin/categories')
       .then(r => r.json())
       .then(j => setCategories((j.data?.categories || []).filter((c: Category) => c.is_active)))
   }, [])
+
+  // Fetch subcategories when category changes
+  useEffect(() => {
+    if (!watchedCategoryId) { setSubcategories([]); return }
+    const cat = categories.find(c => c.id === watchedCategoryId)
+    if (!cat) { setSubcategories([]); return }
+    fetch(`/api/admin/subcategories?category=${cat.slug}`)
+      .then(r => r.json())
+      .then(j => setSubcategories((j.data?.subcategories || []).filter((s: Subcategory) => s.is_active)))
+      .catch(() => setSubcategories([]))
+    setValue('subcategory_id', '')
+  }, [watchedCategoryId, categories, setValue])
 
   const onBarcodeFound = (data: BarcodeProductData) => {
     const filled = new Set<string>()
@@ -91,6 +107,7 @@ export default function NewProductPage() {
       mrp: (data.mrp == null || !Number.isFinite(data.mrp)) ? null : data.mrp,
       cost_price: (data.cost_price == null || !Number.isFinite(data.cost_price)) ? null : data.cost_price,
       badge: data.badge === '' ? null : data.badge,
+      subcategory_id: data.subcategory_id || null,
       image_url: imageUrl,
     }
     const res = await fetch('/api/admin/products', {
@@ -172,6 +189,15 @@ export default function NewProductPage() {
               </select>
               {errors.category_id && <p className="text-xs text-red-500 mt-1">{errors.category_id.message}</p>}
             </div>
+            {subcategories.length > 0 && (
+              <div>
+                <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Subcategory</label>
+                <select {...register('subcategory_id')} className="input-field mt-1">
+                  <option value="">None</option>
+                  {subcategories.map(s => <option key={s.id} value={s.id}>{s.emoji} {s.name}</option>)}
+                </select>
+              </div>
+            )}
             <div>
               <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
                 Brand{af('brand') && <AutoBadge />}

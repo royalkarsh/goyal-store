@@ -5,8 +5,9 @@ import ProductCard from './ProductCard'
 import type { Product } from '@/types'
 
 interface Props {
-  initialProducts: Product[]
-  activeCategory?: string
+  initialProducts:  Product[]
+  activeCategory?:  string
+  activeSubcategory?: string
 }
 
 function SkeletonCard() {
@@ -26,52 +27,57 @@ function SkeletonCard() {
   )
 }
 
-export default function ProductGrid({ initialProducts, activeCategory = 'all' }: Props) {
-  const [products, setProducts] = useState<Product[]>(initialProducts)
-  const [loading, setLoading]   = useState(false)
-  const [page, setPage]         = useState(1)
-  const [hasMore, setHasMore]   = useState(initialProducts.length >= 24)
+export default function ProductGrid({
+  initialProducts,
+  activeCategory    = 'all',
+  activeSubcategory = '',
+}: Props) {
+  const [products,    setProducts]    = useState<Product[]>(initialProducts)
+  const [loading,     setLoading]     = useState(false)
+  const [page,        setPage]        = useState(1)
+  const [hasMore,     setHasMore]     = useState(initialProducts.length >= 24)
   const [loadingMore, setLoadingMore] = useState(false)
 
-  const fetchProducts = useCallback(async (cat: string, pg: number) => {
+  const fetchProducts = useCallback(async (cat: string, subcat: string, pg: number) => {
     if (pg === 1) setLoading(true)
     else setLoadingMore(true)
 
     const params = new URLSearchParams({ page: String(pg), limit: '24' })
-    if (cat && cat !== 'all') params.set('category', cat)
+    // Subcategory takes priority; fall back to category
+    if (subcat)               params.set('subcategory', subcat)
+    else if (cat !== 'all')   params.set('category', cat)
 
     const res  = await fetch(`/api/products?${params}`)
     const json = await res.json()
-    const newProducts: Product[] = json.data?.products || []
+    const next: Product[] = json.data?.products || []
 
-    if (pg === 1) setProducts(newProducts)
-    else setProducts(prev => [...prev, ...newProducts])
+    if (pg === 1) setProducts(next)
+    else setProducts(prev => [...prev, ...next])
 
-    setHasMore(newProducts.length === 24)
+    setHasMore(next.length === 24)
     setLoading(false)
     setLoadingMore(false)
   }, [])
 
-  // Re-fetch when category changes
   useEffect(() => {
     setPage(1)
-    if (activeCategory === 'all') {
+    const isDefault = activeCategory === 'all' && !activeSubcategory
+    if (isDefault) {
       setProducts(initialProducts)
       setHasMore(initialProducts.length >= 24)
     } else {
-      fetchProducts(activeCategory, 1)
+      fetchProducts(activeCategory, activeSubcategory, 1)
     }
-  }, [activeCategory, initialProducts, fetchProducts])
+  }, [activeCategory, activeSubcategory, initialProducts, fetchProducts])
 
   const loadMore = () => {
-    const nextPage = page + 1
-    setPage(nextPage)
-    fetchProducts(activeCategory, nextPage)
+    const next = page + 1
+    setPage(next)
+    fetchProducts(activeCategory, activeSubcategory, next)
   }
 
   return (
     <section id="products" className="max-w-6xl mx-auto px-4 py-10">
-      {/* Section header */}
       <div className="flex items-end justify-between mb-6">
         <div>
           <p className="section-label">Our Products</p>

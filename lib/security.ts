@@ -142,6 +142,7 @@ export const productSchema = z.object({
   badge:               z.enum(['sale','new','popular','hot']).nullable().optional(),
   is_active:           z.boolean(),
   is_featured:         z.boolean(),
+  subcategory_id:      z.string().uuid().nullable().optional(),
 })
 
 export const couponSchema = z.object({

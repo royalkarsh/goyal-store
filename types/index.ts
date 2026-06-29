@@ -47,6 +47,19 @@ export interface Category {
   created_at: string
 }
 
+export interface Subcategory {
+  id: string
+  category_id: string
+  name: string
+  slug: string
+  emoji: string | null
+  display_order: number
+  is_active: boolean
+  created_at: string
+  // Joined
+  category?: Pick<Category, 'id' | 'name' | 'slug' | 'emoji'>
+}
+
 export interface Product {
   id: string
   name: string
@@ -73,8 +86,10 @@ export interface Product {
   sort_order: number
   created_at: string
   updated_at: string
+  subcategory_id: string | null
   // Joined
   category?: Category
+  subcategory?: Subcategory | null
 }
 
 export interface Order {
@@ -234,6 +249,7 @@ export interface ProductFormData {
   badge: ProductBadge
   is_active: boolean
   is_featured: boolean
+  subcategory_id: string | null
 }
 
 // Checkout form

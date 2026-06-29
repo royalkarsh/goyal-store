@@ -7,13 +7,14 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { ArrowLeft, Trash2 } from 'lucide-react'
 import toast from 'react-hot-toast'
-import type { Category, Product } from '@/types'
+import type { Category, Product, Subcategory } from '@/types'
 import ImageUpload from '@/components/admin/ImageUpload'
 
 const formSchema = z.object({
   name:                z.string().min(2).max(200),
   description:         z.string().max(2000).optional(),
   category_id:         z.string().min(1, 'Select a category'),
+  subcategory_id:      z.string().optional(),
   brand:               z.string().max(100).optional(),
   weight:              z.string().max(50).optional(),
   unit:                z.string().min(1).max(20),
@@ -35,17 +36,20 @@ type FormData = z.infer<typeof formSchema>
 export default function EditProductPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const router  = useRouter()
-  const [categories, setCategories] = useState<Category[]>([])
-  const [product, setProduct]       = useState<Product | null>(null)
-  const [loading, setLoading]       = useState(true)
-  const [submitting, setSubmitting] = useState(false)
-  const [deleting, setDeleting]     = useState(false)
+  const [categories,    setCategories]    = useState<Category[]>([])
+  const [subcategories, setSubcategories] = useState<Subcategory[]>([])
+  const [product,       setProduct]       = useState<Product | null>(null)
+  const [loading,       setLoading]       = useState(true)
+  const [submitting,    setSubmitting]    = useState(false)
+  const [deleting,      setDeleting]      = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
-  const [imageUrl, setImageUrl]     = useState<string | null>(null)
+  const [imageUrl,      setImageUrl]      = useState<string | null>(null)
 
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<FormData>({
+  const { register, handleSubmit, reset, watch, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(formSchema),
   })
+
+  const watchedCategoryId = watch('category_id')
 
   useEffect(() => {
     Promise.all([
@@ -57,7 +61,9 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
       setImageUrl(p.image_url || null)
       reset({
         name: p.name, description: p.description || '',
-        category_id: p.category_id, brand: p.brand || '',
+        category_id: p.category_id,
+        subcategory_id: p.subcategory_id || '',
+        brand: p.brand || '',
         weight: p.weight || '', unit: p.unit,
         price: p.price, mrp: p.mrp ?? undefined, cost_price: p.cost_price ?? undefined,
         tax_rate: p.tax_rate, hsn_code: p.hsn_code || '',
@@ -70,6 +76,17 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
     })
   }, [id, reset])
 
+  // Fetch subcategories when category changes
+  useEffect(() => {
+    if (!watchedCategoryId) { setSubcategories([]); return }
+    const cat = categories.find(c => c.id === watchedCategoryId)
+    if (!cat) { setSubcategories([]); return }
+    fetch(`/api/admin/subcategories?category=${cat.slug}`)
+      .then(r => r.json())
+      .then(j => setSubcategories((j.data?.subcategories || []).filter((s: Subcategory) => s.is_active)))
+      .catch(() => setSubcategories([]))
+  }, [watchedCategoryId, categories])
+
   const onSubmit = async (data: FormData) => {
     setSubmitting(true)
     const payload = {
@@ -77,6 +94,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
       mrp: (data.mrp == null || !Number.isFinite(data.mrp)) ? null : data.mrp,
       cost_price: (data.cost_price == null || !Number.isFinite(data.cost_price)) ? null : data.cost_price,
       badge: data.badge === '' ? null : data.badge,
+      subcategory_id: data.subcategory_id || null,
       image_url: imageUrl,
     }
     const res = await fetch(`/api/admin/products/${id}`, {
@@ -158,6 +176,15 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
               </select>
               {errors.category_id && <p className="text-xs text-red-500 mt-1">{errors.category_id.message}</p>}
             </div>
+            {subcategories.length > 0 && (
+              <div>
+                <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Subcategory</label>
+                <select {...register('subcategory_id')} className="input-field mt-1">
+                  <option value="">None</option>
+                  {subcategories.map(s => <option key={s.id} value={s.id}>{s.emoji} {s.name}</option>)}
+                </select>
+              </div>
+            )}
             <div>
               <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Brand</label>
               <input {...register('brand')} className="input-field mt-1" />
