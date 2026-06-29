@@ -1,6 +1,6 @@
 'use client'
 // app/(admin)/admin/products/page.tsx
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, Suspense } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Plus, Search, Edit2, ToggleLeft, ToggleRight, AlertTriangle, Package, ScanLine, X, ChevronRight } from 'lucide-react'
@@ -141,8 +141,8 @@ function QuickAddModal({
   )
 }
 
-// ── Main page ──────────────────────────────────────────────────────────────────
-export default function AdminProductsPage() {
+// ── Inner page (needs Suspense for useSearchParams) ───────────────────────────
+function AdminProductsInner() {
   const router       = useRouter()
   const searchParams = useSearchParams()
   const [products,    setProducts]    = useState<Product[]>([])
@@ -380,5 +380,14 @@ export default function AdminProductsPage() {
       </div>
 
     </div>
+  )
+}
+
+// ── Default export wraps in Suspense (required for useSearchParams) ────────────
+export default function AdminProductsPage() {
+  return (
+    <Suspense>
+      <AdminProductsInner />
+    </Suspense>
   )
 }
