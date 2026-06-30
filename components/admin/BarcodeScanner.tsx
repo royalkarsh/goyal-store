@@ -19,7 +19,7 @@ export interface BarcodeProductData {
 interface Props {
   onFound:        (data: BarcodeProductData) => void
   onClose:        () => void
-  onFillManually?: () => void  // if provided, "Fill Manually" calls this instead of just closing
+  onFillManually?: (barcode?: string) => void  // if provided, "Fill Manually" calls this instead of just closing
 }
 
 type ScanState = 'idle' | 'scanning' | 'fetching' | 'found' | 'not_found'
@@ -29,10 +29,11 @@ export default function BarcodeScanner({ onFound, onClose, onFillManually }: Pro
   const readerRef = useRef<any>(null)
   const streamRef = useRef<MediaStream | null>(null)
 
-  const [mode,       setMode]       = useState<'camera' | 'manual'>('camera')
-  const [scanState,  setScanState]  = useState<ScanState>('scanning')
-  const [result,     setResult]     = useState<BarcodeProductData | null>(null)
-  const [manualCode, setManualCode] = useState('')
+  const [mode,        setMode]       = useState<'camera' | 'manual'>('camera')
+  const [scanState,   setScanState]  = useState<ScanState>('scanning')
+  const [result,      setResult]     = useState<BarcodeProductData | null>(null)
+  const [manualCode,  setManualCode] = useState('')
+  const [lastCode,    setLastCode]   = useState('')   // the barcode that was looked up
   const fetchingRef  = useRef(false)
 
   // ── Start camera ─────────────────────────────────────────────
@@ -99,6 +100,7 @@ export default function BarcodeScanner({ onFound, onClose, onFillManually }: Pro
     if (fetchingRef.current) return
     fetchingRef.current = true
     stopCamera()
+    setLastCode(code)
     setScanState('fetching')
 
     try {
@@ -134,7 +136,7 @@ export default function BarcodeScanner({ onFound, onClose, onFillManually }: Pro
 
   const handleClose = () => { stopCamera(); onClose() }
   const handleConfirm = () => { if (result) onFound(result) }
-  const handleFillManually = () => { stopCamera(); onFillManually ? onFillManually() : onClose() }
+  const handleFillManually = () => { stopCamera(); onFillManually ? onFillManually(lastCode || undefined) : onClose() }
 
   const switchToManual = () => { stopCamera(); setMode('manual') }
   const switchToCamera = () => { setScanState('scanning'); setMode('camera') }

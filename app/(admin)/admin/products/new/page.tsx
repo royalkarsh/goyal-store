@@ -1,7 +1,7 @@
 'use client'
 // app/(admin)/admin/products/new/page.tsx
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -43,8 +43,9 @@ function AutoBadge() {
   )
 }
 
-export default function NewProductPage() {
-  const router = useRouter()
+function NewProductInner() {
+  const router       = useRouter()
+  const searchParams = useSearchParams()
   const [categories,    setCategories]    = useState<Category[]>([])
   const [subcategories, setSubcategories] = useState<Subcategory[]>([])
   const [submitting,    setSubmitting]    = useState(false)
@@ -59,6 +60,16 @@ export default function NewProductPage() {
       is_active: true, is_featured: false,
     },
   })
+
+  // Auto-fill barcode from URL param (set when redirected from "Fill Manually" after failed scan)
+  useEffect(() => {
+    const bc = searchParams.get('barcode')
+    if (bc && /^\d{8,14}$/.test(bc)) {
+      setValue('barcode', bc)
+      setAutofilled(prev => new Set(prev).add('barcode'))
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const watchedCategoryId = watch('category_id')
 
@@ -349,5 +360,13 @@ export default function NewProductPage() {
         </div>
       </form>
     </div>
+  )
+}
+
+export default function NewProductPage() {
+  return (
+    <Suspense>
+      <NewProductInner />
+    </Suspense>
   )
 }
