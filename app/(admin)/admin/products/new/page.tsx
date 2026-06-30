@@ -30,6 +30,7 @@ const formSchema = z.object({
   badge:               z.enum(['sale', 'new', 'popular', 'hot', '']).optional(),
   is_active:           z.boolean(),
   is_featured:         z.boolean(),
+  barcode:             z.string().max(20).optional(),
 })
 
 type FormData = z.infer<typeof formSchema>
@@ -82,10 +83,11 @@ export default function NewProductPage() {
   const onBarcodeFound = (data: BarcodeProductData) => {
     const filled = new Set<string>()
 
-    if (data.name)  { setValue('name',  data.name);  filled.add('name')  }
-    if (data.brand) { setValue('brand', data.brand); filled.add('brand') }
-    if (data.weight){ setValue('weight',data.weight);filled.add('weight') }
-    if (data.emoji) { setValue('emoji', data.emoji); filled.add('emoji') }
+    if (data.barcode){ setValue('barcode', data.barcode); filled.add('barcode') }
+    if (data.name)   { setValue('name',   data.name);    filled.add('name')    }
+    if (data.brand)  { setValue('brand',  data.brand);   filled.add('brand')   }
+    if (data.weight) { setValue('weight', data.weight);  filled.add('weight')  }
+    if (data.emoji)  { setValue('emoji',  data.emoji);   filled.add('emoji')   }
 
     // Match category by slug
     const cat = categories.find(c => (c as any).slug === data.category_slug)
@@ -108,6 +110,7 @@ export default function NewProductPage() {
       cost_price: (data.cost_price == null || !Number.isFinite(data.cost_price)) ? null : data.cost_price,
       badge: data.badge === '' ? null : data.badge,
       subcategory_id: data.subcategory_id || null,
+      barcode:        data.barcode || null,
       image_url: imageUrl,
     }
     const res = await fetch('/api/admin/products', {
@@ -216,6 +219,17 @@ export default function NewProductPage() {
                 {...register('emoji')}
                 className={`input-field mt-1 ${af('emoji') ? 'border-green-400 ring-1 ring-green-300' : ''}`}
                 placeholder="🧂" maxLength={10}
+              />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                Barcode{af('barcode') && <AutoBadge />}
+              </label>
+              <input
+                {...register('barcode')}
+                className={`input-field mt-1 font-mono ${af('barcode') ? 'border-green-400 ring-1 ring-green-300' : ''}`}
+                placeholder="e.g. 8901058006530"
+                maxLength={14}
               />
             </div>
             <div>

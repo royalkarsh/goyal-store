@@ -1,6 +1,6 @@
 // app/api/admin/barcode/[code]/route.ts — Look up product info by barcode via Open Food Facts
 import { NextRequest } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { apiSuccess, apiError, apiUnauthorized, rateLimitByIP } from '@/lib/security'
 
 const CATEGORY_MAP: { pattern: RegExp; slug: string }[] = [
@@ -67,6 +67,30 @@ export async function GET(
   // Sanitize: digits only, 8–14 chars (EAN-8, EAN-13, UPC-A, etc.)
   if (!/^\d{8,14}$/.test(code)) return apiError('Invalid barcode format', 400)
 
+  // ── Check our own DB first — instant if product already added ────────────
+  const adminSupabase = await createAdminClient()
+  const { data: existing } = await adminSupabase
+    .from('products')
+    .select('id, name, brand, weight, image_url, emoji, barcode, category:categories(slug)')
+    .eq('barcode', code)
+    .eq('is_active', true)
+    .single()
+
+  if (existing) {
+    return apiSuccess({
+      name:          existing.name,
+      brand:         existing.brand    || null,
+      weight:        existing.weight   || null,
+      image_url:     existing.image_url || null,
+      emoji:         existing.emoji    || '📦',
+      category_slug: (existing.category as any)?.slug || 'staples',
+      barcode:       code,
+      from_db:       true,   // flag so UI can show "Already in your catalog"
+      product_id:    existing.id,
+    })
+  }
+
+  // ── Fall back to Open Food Facts ─────────────────────────────────────────
   const p = await fetchFromDatabases(code)
   if (!p) return apiError('Product not found in any database', 404)
 
@@ -81,5 +105,6 @@ export async function GET(
     emoji:         EMOJI_MAP[categorySlug] ?? '📦',
     category_slug: categorySlug,
     barcode:       code,
+    from_db:       false,
   })
 }

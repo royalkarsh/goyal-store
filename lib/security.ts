@@ -144,6 +144,7 @@ export const productSchema = z.object({
   is_active:           z.boolean(),
   is_featured:         z.boolean(),
   subcategory_id:      z.string().uuid().nullable().optional(),
+  barcode:             z.string().regex(/^\d{8,14}$/).optional().nullable(),
 })
 
 export const couponSchema = z.object({

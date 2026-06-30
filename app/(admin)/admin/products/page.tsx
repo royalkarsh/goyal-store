@@ -44,6 +44,7 @@ function QuickAddModal({
         category_id:         cat.id,
         emoji:               data.emoji,
         image_url:           data.image_url,
+        barcode:             data.barcode || undefined,
         price:               priceNum,
         unit:                'pcs',
         tax_rate:            0,
@@ -68,7 +69,9 @@ function QuickAddModal({
       <div className="bg-white rounded-3xl w-full max-w-sm shadow-2xl animate-fade-in overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-cream-dark">
-          <p className="font-display font-bold text-green-deep">Quick Add Product</p>
+          <p className="font-display font-bold text-green-deep">
+            {data.from_db ? 'Already in Catalog' : 'Quick Add Product'}
+          </p>
           <button onClick={onClose} className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-green-deep rounded-xl hover:bg-cream transition-colors">
             <X size={18} />
           </button>
@@ -87,7 +90,10 @@ function QuickAddModal({
               <p className="text-sm font-bold text-green-deep leading-snug">{data.name || <span className="text-gray-400 italic">Unknown name</span>}</p>
               {data.brand  && <p className="text-xs text-gray-500 mt-0.5">{data.brand}</p>}
               {data.weight && <p className="text-xs text-gray-400">{data.weight}</p>}
-              {cat ? (
+              <p className="text-xs font-mono text-gray-400 mt-0.5">{data.barcode}</p>
+              {data.from_db ? (
+                <span className="inline-block mt-1 bg-blue-100 text-blue-700 text-xs font-semibold px-2 py-0.5 rounded-full">✓ Already in your catalog</span>
+              ) : cat ? (
                 <span className="inline-block mt-1 bg-green-100 text-green-700 text-xs font-semibold px-2 py-0.5 rounded-full">{cat.emoji} {cat.name}</span>
               ) : (
                 <span className="inline-block mt-1 bg-orange-100 text-orange-600 text-xs font-semibold px-2 py-0.5 rounded-full">Category not matched</span>
@@ -95,46 +101,59 @@ function QuickAddModal({
             </div>
           </div>
 
-          {/* Price + stock */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Price (₹) *</label>
-              <input
-                type="number" step="0.01" min="0.01"
-                value={price}
-                onChange={e => setPrice(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && handleSave()}
-                placeholder="0.00"
-                className="input-field mt-1"
-                autoFocus
-              />
+          {data.from_db ? (
+            /* Product already exists — offer to go edit it */
+            <div className="flex gap-2 pt-1">
+              <button onClick={onClose} className="flex-1 py-3 border border-cream-dark rounded-xl text-sm font-semibold text-green-deep hover:bg-cream transition-colors">
+                Close
+              </button>
+              <a
+                href={`/admin/products/${data.product_id}/edit`}
+                className="flex-1 py-3 bg-green-deep text-white rounded-xl text-sm font-bold hover:bg-green-mid transition-colors text-center"
+              >
+                Edit Product
+              </a>
             </div>
-            <div>
-              <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Stock Qty</label>
-              <input
-                type="number" min="0"
-                value={stock}
-                onChange={e => setStock(e.target.value)}
-                className="input-field mt-1"
-              />
-            </div>
-          </div>
-
-          <div className="flex gap-2 pt-1">
-            <button
-              onClick={onClose}
-              className="flex-1 py-3 border border-cream-dark rounded-xl text-sm font-semibold text-green-deep hover:bg-cream transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="flex-1 py-3 bg-green-deep text-white rounded-xl text-sm font-bold hover:bg-green-mid transition-colors disabled:opacity-50"
-            >
-              {saving ? 'Saving…' : 'Add Product'}
-            </button>
-          </div>
+          ) : (
+            <>
+              {/* Price + stock */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Price (₹) *</label>
+                  <input
+                    type="number" step="0.01" min="0.01"
+                    value={price}
+                    onChange={e => setPrice(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && handleSave()}
+                    placeholder="0.00"
+                    className="input-field mt-1"
+                    autoFocus
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Stock Qty</label>
+                  <input
+                    type="number" min="0"
+                    value={stock}
+                    onChange={e => setStock(e.target.value)}
+                    className="input-field mt-1"
+                  />
+                </div>
+              </div>
+              <div className="flex gap-2 pt-1">
+                <button onClick={onClose} className="flex-1 py-3 border border-cream-dark rounded-xl text-sm font-semibold text-green-deep hover:bg-cream transition-colors">
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSave}
+                  disabled={saving}
+                  className="flex-1 py-3 bg-green-deep text-white rounded-xl text-sm font-bold hover:bg-green-mid transition-colors disabled:opacity-50"
+                >
+                  {saving ? 'Saving…' : 'Add Product'}
+                </button>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>
@@ -270,6 +289,7 @@ function AdminProductsInner() {
                   <th className="px-5 py-3 text-left">Category</th>
                   <th className="px-5 py-3 text-left">Price</th>
                   <th className="px-5 py-3 text-left">Stock</th>
+                  <th className="px-5 py-3 text-left hidden lg:table-cell">Barcode</th>
                   <th className="px-5 py-3 text-left">Status</th>
                   <th className="px-5 py-3 text-left">Actions</th>
                 </tr>
@@ -317,6 +337,15 @@ function AdminProductsInner() {
                           {(outOfStock || lowStock) && <AlertTriangle size={12} />}
                           {product.stock_qty}
                         </span>
+                      </td>
+                      <td className="px-5 py-3 hidden lg:table-cell">
+                        {(product as any).barcode ? (
+                          <span className="text-xs font-mono text-gray-500 bg-gray-50 px-2 py-1 rounded-lg">
+                            {(product as any).barcode}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-gray-300">—</span>
+                        )}
                       </td>
                       <td className="px-5 py-3">
                         <span className={`text-xs font-semibold px-2 py-1 rounded-full

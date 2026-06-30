@@ -12,6 +12,8 @@ export interface BarcodeProductData {
   emoji:         string
   category_slug: string
   barcode:       string
+  from_db?:      boolean    // true = already in your product catalog
+  product_id?:   string     // set when from_db = true
 }
 
 interface Props {

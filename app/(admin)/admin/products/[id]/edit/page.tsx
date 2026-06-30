@@ -29,6 +29,7 @@ const formSchema = z.object({
   badge:               z.enum(['sale', 'new', 'popular', 'hot', '']).optional(),
   is_active:           z.boolean(),
   is_featured:         z.boolean(),
+  barcode:             z.string().max(20).optional(),
 })
 
 type FormData = z.infer<typeof formSchema>
@@ -78,6 +79,7 @@ export default function EditProductPage({
         stock_qty: p.stock_qty, low_stock_threshold: p.low_stock_threshold,
         emoji: p.emoji || '', badge: p.badge || '',
         is_active: p.is_active, is_featured: p.is_featured,
+        barcode: p.barcode || '',
       })
       setCategories((catRes.data?.categories || []).filter((c: Category) => c.is_active))
       setLoading(false)
@@ -103,6 +105,7 @@ export default function EditProductPage({
       cost_price: (data.cost_price == null || !Number.isFinite(data.cost_price)) ? null : data.cost_price,
       badge: data.badge === '' ? null : data.badge,
       subcategory_id: data.subcategory_id || null,
+      barcode:        data.barcode || null,
       image_url: imageUrl,
     }
     const res = await fetch(`/api/admin/products/${id}`, {
@@ -200,6 +203,10 @@ export default function EditProductPage({
             <div>
               <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Emoji</label>
               <input {...register('emoji')} className="input-field mt-1" maxLength={10} />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Barcode</label>
+              <input {...register('barcode')} className="input-field mt-1 font-mono" placeholder="e.g. 8901058006530" maxLength={14} />
             </div>
             <div>
               <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Badge</label>
