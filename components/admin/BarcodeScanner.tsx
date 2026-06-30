@@ -29,12 +29,12 @@ export default function BarcodeScanner({ onFound, onClose, onFillManually }: Pro
   const readerRef = useRef<any>(null)
   const streamRef = useRef<MediaStream | null>(null)
 
-  const [mode,        setMode]       = useState<'camera' | 'manual'>('camera')
-  const [scanState,   setScanState]  = useState<ScanState>('scanning')
-  const [result,      setResult]     = useState<BarcodeProductData | null>(null)
-  const [manualCode,  setManualCode] = useState('')
-  const [lastCode,    setLastCode]   = useState('')   // the barcode that was looked up
+  const [mode,       setMode]       = useState<'camera' | 'manual'>('camera')
+  const [scanState,  setScanState]  = useState<ScanState>('scanning')
+  const [result,     setResult]     = useState<BarcodeProductData | null>(null)
+  const [manualCode, setManualCode] = useState('')
   const fetchingRef  = useRef(false)
+  const lastCodeRef  = useRef('')   // ref so handleFillManually always sees the current code
 
   // ── Start camera ─────────────────────────────────────────────
   useEffect(() => {
@@ -99,8 +99,8 @@ export default function BarcodeScanner({ onFound, onClose, onFillManually }: Pro
   const lookup = async (code: string) => {
     if (fetchingRef.current) return
     fetchingRef.current = true
+    lastCodeRef.current = code
     stopCamera()
-    setLastCode(code)
     setScanState('fetching')
 
     try {
@@ -136,7 +136,7 @@ export default function BarcodeScanner({ onFound, onClose, onFillManually }: Pro
 
   const handleClose = () => { stopCamera(); onClose() }
   const handleConfirm = () => { if (result) onFound(result) }
-  const handleFillManually = () => { stopCamera(); onFillManually ? onFillManually(lastCode || undefined) : onClose() }
+  const handleFillManually = () => { stopCamera(); onFillManually ? onFillManually(lastCodeRef.current || undefined) : onClose() }
 
   const switchToManual = () => { stopCamera(); setMode('manual') }
   const switchToCamera = () => { setScanState('scanning'); setMode('camera') }
