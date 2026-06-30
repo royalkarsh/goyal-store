@@ -9,7 +9,12 @@ export const metadata: Metadata = {
   description: 'Browse 500+ grocery products. Fresh dairy, staples, spices, snacks and more. Fast delivery in Rohini, Delhi.',
 }
 
-export default async function ShopPage() {
+export default async function ShopPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ search?: string }>
+}) {
+  const { search = '' } = await searchParams
   const supabase = await createClient()
 
   const [{ data: categories }, { data: products }] = await Promise.all([
@@ -32,6 +37,7 @@ export default async function ShopPage() {
       <StoreFront
         categories={(categories as Category[]) || []}
         initialProducts={(products as Product[]) || []}
+        initialSearch={search}
       />
     </div>
   )

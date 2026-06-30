@@ -6,11 +6,12 @@ import ProductGrid from './ProductGrid'
 import type { Category, Product } from '@/types'
 
 interface Props {
-  categories: Category[]
+  categories:      Category[]
   initialProducts: Product[]
+  initialSearch?:  string
 }
 
-export default function StoreFront({ categories, initialProducts }: Props) {
+export default function StoreFront({ categories, initialProducts, initialSearch = '' }: Props) {
   const [activeCategory,    setActiveCategory]    = useState('all')
   const [activeSubcategory, setActiveSubcategory] = useState('')
 
@@ -32,6 +33,7 @@ export default function StoreFront({ categories, initialProducts }: Props) {
         initialProducts={initialProducts}
         activeCategory={activeCategory}
         activeSubcategory={activeSubcategory}
+        initialSearch={initialSearch}
       />
     </>
   )

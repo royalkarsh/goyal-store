@@ -5,9 +5,10 @@ import ProductCard from './ProductCard'
 import type { Product } from '@/types'
 
 interface Props {
-  initialProducts:  Product[]
-  activeCategory?:  string
+  initialProducts:   Product[]
+  activeCategory?:   string
   activeSubcategory?: string
+  initialSearch?:    string
 }
 
 function SkeletonCard() {
@@ -31,6 +32,7 @@ export default function ProductGrid({
   initialProducts,
   activeCategory    = 'all',
   activeSubcategory = '',
+  initialSearch     = '',
 }: Props) {
   const [products,    setProducts]    = useState<Product[]>(initialProducts)
   const [loading,     setLoading]     = useState(false)
@@ -38,14 +40,14 @@ export default function ProductGrid({
   const [hasMore,     setHasMore]     = useState(initialProducts.length >= 24)
   const [loadingMore, setLoadingMore] = useState(false)
 
-  const fetchProducts = useCallback(async (cat: string, subcat: string, pg: number) => {
+  const fetchProducts = useCallback(async (cat: string, subcat: string, pg: number, search = '') => {
     if (pg === 1) setLoading(true)
     else setLoadingMore(true)
 
     const params = new URLSearchParams({ page: String(pg), limit: '24' })
-    // Subcategory takes priority; fall back to category
-    if (subcat)               params.set('subcategory', subcat)
-    else if (cat !== 'all')   params.set('category', cat)
+    if (search)                params.set('search', search)
+    else if (subcat)           params.set('subcategory', subcat)
+    else if (cat !== 'all')    params.set('category', cat)
 
     const res  = await fetch(`/api/products?${params}`)
     const json = await res.json()
@@ -59,16 +61,22 @@ export default function ProductGrid({
     setLoadingMore(false)
   }, [])
 
+  // On mount: if redirected from search overlay, fetch with that query immediately
+  useEffect(() => {
+    if (initialSearch) fetchProducts('all', '', 1, initialSearch)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   useEffect(() => {
     setPage(1)
     const isDefault = activeCategory === 'all' && !activeSubcategory
-    if (isDefault) {
+    if (isDefault && !initialSearch) {
       setProducts(initialProducts)
       setHasMore(initialProducts.length >= 24)
-    } else {
+    } else if (!initialSearch) {
       fetchProducts(activeCategory, activeSubcategory, 1)
     }
-  }, [activeCategory, activeSubcategory, initialProducts, fetchProducts])
+  }, [activeCategory, activeSubcategory, initialProducts, fetchProducts, initialSearch])
 
   const loadMore = () => {
     const next = page + 1
@@ -82,7 +90,7 @@ export default function ProductGrid({
         <div>
           <p className="section-label">Our Products</p>
           <h2 className="section-title mb-0">
-            {activeCategory === 'all' ? 'Everything You Need' : 'Products'}
+            {initialSearch ? `Results for "${initialSearch}"` : activeCategory === 'all' ? 'Everything You Need' : 'Products'}
           </h2>
         </div>
         {products.length > 0 && (
