@@ -222,8 +222,7 @@ function AdminProductsInner() {
           onClose={() => setShowScanner(false)}
           onFillManually={(barcode) => {
             setShowScanner(false)
-            if (barcode) sessionStorage.setItem('scan_barcode', barcode)
-            router.push('/admin/products/new')
+            router.push(barcode ? `/admin/products/new?bc=${encodeURIComponent(barcode)}` : '/admin/products/new')
           }}
         />
       )}

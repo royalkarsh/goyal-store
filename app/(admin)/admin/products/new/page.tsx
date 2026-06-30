@@ -1,6 +1,6 @@
 'use client'
 // app/(admin)/admin/products/new/page.tsx
-import { useState, useEffect, Suspense } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -60,18 +60,16 @@ function NewProductInner() {
     },
   })
 
-  // Auto-fill barcode stored by the scanner's "Fill Manually" redirect
+  // Auto-fill barcode from URL when redirected via "Fill Manually" after a failed scan.
+  // Using window.location.search (not useSearchParams) so it always reflects the
+  // actual current URL — no hydration timing issues, survives Strict Mode remounts.
   useEffect(() => {
-    const bc = sessionStorage.getItem('scan_barcode')
-    if (bc) {
-      sessionStorage.removeItem('scan_barcode')  // consume so it doesn't re-fill on refresh
-      if (/^\d{8,14}$/.test(bc)) {
-        setValue('barcode', bc)
-        setAutofilled(prev => new Set(prev).add('barcode'))
-      }
+    const bc = new URLSearchParams(window.location.search).get('bc')
+    if (bc && /^\d{8,14}$/.test(bc)) {
+      setValue('barcode', bc)
+      setAutofilled(prev => new Set(prev).add('barcode'))
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [setValue])
 
   const watchedCategoryId = watch('category_id')
 
@@ -366,9 +364,5 @@ function NewProductInner() {
 }
 
 export default function NewProductPage() {
-  return (
-    <Suspense>
-      <NewProductInner />
-    </Suspense>
-  )
+  return <NewProductInner />
 }
