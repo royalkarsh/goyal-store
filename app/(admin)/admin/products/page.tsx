@@ -220,7 +220,11 @@ function AdminProductsInner() {
         <BarcodeScanner
           onFound={onBarcodeFound}
           onClose={() => setShowScanner(false)}
-          onFillManually={(barcode) => { setShowScanner(false); router.push(`/admin/products/new${barcode ? `?barcode=${barcode}` : ''}`) }}
+          onFillManually={(barcode) => {
+            setShowScanner(false)
+            if (barcode) sessionStorage.setItem('scan_barcode', barcode)
+            router.push('/admin/products/new')
+          }}
         />
       )}
 

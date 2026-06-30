@@ -1,7 +1,7 @@
 'use client'
 // app/(admin)/admin/products/new/page.tsx
 import { useState, useEffect, Suspense } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -44,8 +44,7 @@ function AutoBadge() {
 }
 
 function NewProductInner() {
-  const router       = useRouter()
-  const searchParams = useSearchParams()
+  const router = useRouter()
   const [categories,    setCategories]    = useState<Category[]>([])
   const [subcategories, setSubcategories] = useState<Subcategory[]>([])
   const [submitting,    setSubmitting]    = useState(false)
@@ -61,12 +60,15 @@ function NewProductInner() {
     },
   })
 
-  // Auto-fill barcode from URL param (set when redirected from "Fill Manually" after failed scan)
+  // Auto-fill barcode stored by the scanner's "Fill Manually" redirect
   useEffect(() => {
-    const bc = searchParams.get('barcode')
-    if (bc && /^\d{8,14}$/.test(bc)) {
-      setValue('barcode', bc)
-      setAutofilled(prev => new Set(prev).add('barcode'))
+    const bc = sessionStorage.getItem('scan_barcode')
+    if (bc) {
+      sessionStorage.removeItem('scan_barcode')  // consume so it doesn't re-fill on refresh
+      if (/^\d{8,14}$/.test(bc)) {
+        setValue('barcode', bc)
+        setAutofilled(prev => new Set(prev).add('barcode'))
+      }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
